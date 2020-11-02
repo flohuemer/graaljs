@@ -1449,6 +1449,7 @@ public class Parser extends AbstractParser {
                 }
                 break;
             case CLASS:
+            case AT:
                 if (ES6_CLASS && isES6()) {
                     if (singleStatement) {
                         throw error(AbstractParser.message(MESSAGE_EXPECTED_STMT, "class declaration"), token);
@@ -1521,13 +1522,17 @@ public class Parser extends AbstractParser {
      *
      * <pre>
      * ClassDeclaration[Yield, Await, Default] :
-     *   class BindingIdentifier[?Yield, ?Await] ClassTail[?Yield, ?Await]
-     *   [+Default] class ClassTail[?Yield, ?Await]
+     *   DecoratorList[?Yield, ?Await]opt class BindingIdentifier[?Yield, ?Await] ClassTail[?Yield, ?Await]
+     *   [+Default] DecoratorList[?Yield, ?Await]opt class ClassTail[?Yield, ?Await]
      * </pre>
      *
      * @return Class expression node.
      */
     private ClassNode classDeclaration(boolean yield, boolean await, boolean defaultExport) {
+        if (type == AT) {
+            decoratorList(yield, await);
+        }
+
         assert type == CLASS;
         int classLineNumber = line;
         long classToken = token;
@@ -1559,12 +1564,16 @@ public class Parser extends AbstractParser {
      *
      * <pre>
      * ClassExpression[Yield, Await] :
-     *   class BindingIdentifier[?Yield, ?Await]opt ClassTail[?Yield, ?Await]
+     *   DecoratorList[?Yield, ?Await]opt class BindingIdentifier[?Yield, ?Await]opt ClassTail[?Yield, ?Await]
      * </pre>
      *
      * @return Class expression node.
      */
     private ClassNode classExpression(boolean yield, boolean await) {
+        if(type == AT) {
+            decoratorList(yield, await);
+        }
+
         assert type == CLASS;
         int classLineNumber = line;
         long classToken = token;
@@ -1597,8 +1606,8 @@ public class Parser extends AbstractParser {
      *      ClassElement[?Yield]
      *      ClassElementList[?Yield] ClassElement[?Yield]
      * ClassElement[Yield] :
-     *      MethodDefinition[?Yield]
-     *      static MethodDefinition[?Yield]
+     *      DecoratorList[?Yield, ?Await]opt MethodDefinition[?Yield]
+     *      DecoratorList[?Yield, ?Await] static MethodDefinition[?Yield]
      *      ;
      * </pre>
      */
@@ -1643,6 +1652,10 @@ public class Parser extends AbstractParser {
                 if (type == RBRACE) {
                     break;
                 }
+                if (type == AT) {
+                    decoratorList(yield, await);
+                }
+
                 boolean isStatic = false;
                 if (type == STATIC) {
                     TokenType nextToken = lookahead();
@@ -4598,6 +4611,7 @@ public class Parser extends AbstractParser {
                 break;
 
             case CLASS:
+            case AT:
                 if (ES6_CLASS && isES6()) {
                     lhs = classExpression(yield, await);
                     break;
@@ -6716,6 +6730,7 @@ public class Parser extends AbstractParser {
                         hoistableDeclaration = true;
                         break;
                     case CLASS:
+                    case AT:
                         assignmentExpression = classDeclaration(false, isES2021() && ES2021_TOP_LEVEL_AWAIT, true);
                         ident = ((ClassNode) assignmentExpression).getIdent();
                         break;
@@ -6768,7 +6783,8 @@ public class Parser extends AbstractParser {
                 }
                 break;
             }
-            case CLASS: {
+            case CLASS:
+            case AT: {
                 ClassNode classDeclaration = classDeclaration(false, isES2021() && ES2021_TOP_LEVEL_AWAIT, false);
                 module.addExport(new ExportNode(exportToken, Token.descPosition(exportToken), finish, classDeclaration.getIdent(), classDeclaration, false));
                 break;
