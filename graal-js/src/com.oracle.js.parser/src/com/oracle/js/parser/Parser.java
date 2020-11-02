@@ -46,6 +46,7 @@ import static com.oracle.js.parser.TokenType.AS;
 import static com.oracle.js.parser.TokenType.ASSIGN;
 import static com.oracle.js.parser.TokenType.ASSIGN_INIT;
 import static com.oracle.js.parser.TokenType.ASYNC;
+import static com.oracle.js.parser.TokenType.AT;
 import static com.oracle.js.parser.TokenType.AWAIT;
 import static com.oracle.js.parser.TokenType.CASE;
 import static com.oracle.js.parser.TokenType.CATCH;
@@ -176,9 +177,13 @@ import com.oracle.js.parser.ir.visitor.NodeVisitor;
  */
 @SuppressWarnings("fallthrough")
 public class Parser extends AbstractParser {
-    /** The arguments variable name. */
+    /**
+     * The arguments variable name.
+     */
     private static final String ARGUMENTS_NAME = "arguments";
-    /** The eval function variable name. */
+    /**
+     * The eval function variable name.
+     */
     private static final String EVAL_NAME = "eval";
     private static final String CONSTRUCTOR_NAME = "constructor";
     private static final String PRIVATE_CONSTRUCTOR_NAME = "#constructor";
@@ -186,22 +191,38 @@ public class Parser extends AbstractParser {
     private static final String NEW_TARGET_NAME = "new.target";
     private static final String IMPORT_META_NAME = "import.meta";
     private static final String PROTOTYPE_NAME = "prototype";
-    /** Function.prototype.apply method name. */
+    /**
+     * Function.prototype.apply method name.
+     */
     private static final String APPLY_NAME = "apply";
 
-    /** EXEC name - special property used by $EXEC API. */
+    /**
+     * EXEC name - special property used by $EXEC API.
+     */
     private static final String EXEC_NAME = "$EXEC";
-    /** Function name for anonymous functions. */
+    /**
+     * Function name for anonymous functions.
+     */
     private static final String ANONYMOUS_FUNCTION_NAME = ":anonymous";
-    /** Function name for the program entry point. */
+    /**
+     * Function name for the program entry point.
+     */
     private static final String PROGRAM_NAME = ":program";
-    /** Internal lexical binding name for {@code catch} error (destructuring). */
+    /**
+     * Internal lexical binding name for {@code catch} error (destructuring).
+     */
     private static final String ERROR_BINDING_NAME = ":error";
-    /** Internal lexical binding name for {@code switch} expression. */
+    /**
+     * Internal lexical binding name for {@code switch} expression.
+     */
     private static final String SWITCH_BINDING_NAME = ":switch";
-    /** Function name for arrow functions. */
+    /**
+     * Function name for arrow functions.
+     */
     private static final String ARROW_FUNCTION_NAME = ":=>";
-    /** Internal function name for class field initializer. */
+    /**
+     * Internal function name for class field initializer.
+     */
     private static final String INITIALIZER_FUNCTION_NAME = ":initializer";
 
     private static final String FUNCTION_PARAMETER_CONTEXT = "function parameter";
@@ -233,9 +254,13 @@ public class Parser extends AbstractParser {
 
     private static final int REPARSE_IS_PROPERTY_ACCESSOR = 1 << 0;
     private static final int REPARSE_IS_METHOD = 1 << 1;
-    /** Parsing eval. */
+    /**
+     * Parsing eval.
+     */
     private static final int PARSE_EVAL = 1 << 2;
-    /** Parsing eval in a function (i.e. not script or module) context. */
+    /**
+     * Parsing eval in a function (i.e. not script or module) context.
+     */
     private static final int PARSE_FUNCTION_CONTEXT_EVAL = 1 << 3;
 
     private static final String MESSAGE_INVALID_LVALUE = "invalid.lvalue";
@@ -246,16 +271,24 @@ public class Parser extends AbstractParser {
     private static final String MESSAGE_EXPECTED_OPERAND = "expected.operand";
     private static final String MESSAGE_PROPERTY_REDEFINITON = "property.redefinition";
 
-    /** Current env. */
+    /**
+     * Current env.
+     */
     private final ScriptEnvironment env;
 
-    /** Is scripting mode. */
+    /**
+     * Is scripting mode.
+     */
     private final boolean scripting;
 
-    /** Is shebang supported */
+    /**
+     * Is shebang supported
+     */
     private final boolean shebang;
 
-    /** Is BigInt supported */
+    /**
+     * Is BigInt supported
+     */
     private final boolean allowBigInt;
 
     private List<Statement> functionDeclarations;
@@ -263,10 +296,14 @@ public class Parser extends AbstractParser {
     private final ParserContext lc;
     private final List<Object> defaultNames;
 
-    /** Namespace for function names where not explicitly given */
+    /**
+     * Namespace for function names where not explicitly given
+     */
     private final Namespace namespace;
 
-    /** to receive line information from Lexer when scanning multiline literals. */
+    /**
+     * to receive line information from Lexer when scanning multiline literals.
+     */
     protected final Lexer.LineInfoReceiver lineInfoReceiver;
 
     private RecompilableScriptFunctionData reparsedFunction;
@@ -279,7 +316,7 @@ public class Parser extends AbstractParser {
     /**
      * Constructor
      *
-     * @param env script environment
+     * @param env    script environment
      * @param source source to parse
      * @param errors error manager
      */
@@ -290,7 +327,7 @@ public class Parser extends AbstractParser {
     /**
      * Constructor
      *
-     * @param env script environment
+     * @param env    script environment
      * @param source source to parse
      * @param errors error manager
      * @param strict strict
@@ -302,10 +339,10 @@ public class Parser extends AbstractParser {
     /**
      * Construct a parser.
      *
-     * @param env script environment
-     * @param source source to parse
-     * @param errors error manager
-     * @param strict parser created with strict mode enabled.
+     * @param env        script environment
+     * @param source     source to parse
+     * @param errors     error manager
+     * @param strict     parser created with strict mode enabled.
      * @param lineOffset line offset to start counting lines from
      */
     public Parser(final ScriptEnvironment env, final Source source, final ErrorManager errors, final boolean strict, final int lineOffset) {
@@ -335,7 +372,7 @@ public class Parser extends AbstractParser {
     /**
      * Execute parse and return the resulting function node. Errors will be thrown and the error
      * manager will contain information if parsing should fail
-     *
+     * <p>
      * This is the default parse call, which will name the function node {@link #PROGRAM_NAME}.
      *
      * @return function node resulting from successful parse
@@ -368,7 +405,7 @@ public class Parser extends AbstractParser {
      * Prepare {@link TokenStream} and {@link Lexer} for parsing.
      *
      * @param startPos source start position
-     * @param len source length
+     * @param len      source length
      */
     private void prepareLexer(final int startPos, final int len) {
         stream = new TokenStream();
@@ -381,7 +418,7 @@ public class Parser extends AbstractParser {
      * Peek ahead at the next token, skipping COMMENT and EOL tokens.
      */
     private TokenType lookahead() {
-        for (int i = 1;; i++) {
+        for (int i = 1; ; i++) {
             TokenType t = T(k + i);
             if (t == EOL || t == COMMENT) {
                 continue;
@@ -394,18 +431,17 @@ public class Parser extends AbstractParser {
     /**
      * Execute parse and return the resulting function node. Errors will be thrown and the error
      * manager will contain information if parsing should fail
-     *
+     * <p>
      * This should be used to create one and only one function node
      *
-     * @param scriptName name for the script, given to the parsed FunctionNode
-     * @param startPos start position in source
-     * @param len length of parse
-     * @param reparseFlags flags provided by {@link RecompilableScriptFunctionData} as context for
-     *            the code being reparsed. This allows us to recognize special forms of functions
-     *            such as property getters and setters or instances of ES6 method shorthand in
-     *            object literals.
+     * @param scriptName    name for the script, given to the parsed FunctionNode
+     * @param startPos      start position in source
+     * @param len           length of parse
+     * @param reparseFlags  flags provided by {@link RecompilableScriptFunctionData} as context for
+     *                      the code being reparsed. This allows us to recognize special forms of functions
+     *                      such as property getters and setters or instances of ES6 method shorthand in
+     *                      object literals.
      * @param argumentNames optional names of arguments assumed by the parsed function node.
-     *
      * @return function node resulting from successful parse
      */
     public FunctionNode parse(final String scriptName, final int startPos, final int len, final int reparseFlags, Scope parentScope, String[] argumentNames) {
@@ -435,9 +471,8 @@ public class Parser extends AbstractParser {
      * contain information if parsing should fail
      *
      * @param moduleName name for the module, given to the parsed FunctionNode
-     * @param startPos start position in source
-     * @param len length of parse
-     *
+     * @param startPos   start position in source
+     * @param len        length of parse
      * @return function node resulting from successful parse
      */
     public FunctionNode parseModule(final String moduleName, final int startPos, final int len) {
@@ -523,7 +558,7 @@ public class Parser extends AbstractParser {
 
             final IdentNode ident = new IdentNode(functionToken, Token.descPosition(functionToken), PROGRAM_NAME);
             final int functionFlags = (generator ? FunctionNode.IS_GENERATOR : 0) | (async ? FunctionNode.IS_ASYNC : 0);
-            final ParserContextFunctionNode function = createParserContextFunctionNode(ident, functionToken, functionFlags, functionLine, Collections.<IdentNode> emptyList(), 0);
+            final ParserContextFunctionNode function = createParserContextFunctionNode(ident, functionToken, functionFlags, functionLine, Collections.<IdentNode>emptyList(), 0);
             function.clearFlag(FunctionNode.IS_PROGRAM);
 
             assert lc.getCurrentScope() == null;
@@ -544,11 +579,11 @@ public class Parser extends AbstractParser {
             expect(EOF);
 
             final FunctionNode functionNode = createFunctionNode(
-                            function,
-                            functionToken,
-                            ident,
-                            functionLine,
-                            functionBody);
+                    function,
+                    functionToken,
+                    ident,
+                    functionLine,
+                    functionBody);
             return functionNode;
         } catch (final Exception e) {
             handleParseException(e);
@@ -605,7 +640,8 @@ public class Parser extends AbstractParser {
         }
 
         // Skip to a recovery point.
-        loop: while (true) {
+        loop:
+        while (true) {
             switch (type) {
                 case EOF:
                     // Can not go any further.
@@ -648,12 +684,12 @@ public class Parser extends AbstractParser {
     }
 
     private ParserContextFunctionNode createParserContextFunctionNode(final IdentNode ident, final long functionToken, final int functionFlags, final int functionLine,
-                    final List<IdentNode> parameters, int functionLength) {
+                                                                      final List<IdentNode> parameters, int functionLength) {
         return createParserContextFunctionNode(ident, functionToken, functionFlags, functionLine, parameters, functionLength, null);
     }
 
     private ParserContextFunctionNode createParserContextFunctionNode(final IdentNode ident, final long functionToken, final int functionFlags, final int functionLine,
-                    final List<IdentNode> parameters, int functionLength, Scope functionTopScope) {
+                                                                      final List<IdentNode> parameters, int functionLength, Scope functionTopScope) {
         final ParserContextFunctionNode parentFunction = lc.getCurrentFunction();
 
         final String name = ident == null ? "" : ident.getName();
@@ -672,7 +708,7 @@ public class Parser extends AbstractParser {
     }
 
     private FunctionNode createFunctionNode(final ParserContextFunctionNode function, final long startToken, final IdentNode ident,
-                    final int functionLine, final Block body) {
+                                            final int functionLine, final Block body) {
         assert body.isFunctionBody() || (body.isParameterBlock() && ((BlockStatement) body.getLastStatement()).getBlock().isFunctionBody());
 
         VarNode varNode = function.getBodyScope().verifyHoistedVarDeclarations();
@@ -685,22 +721,22 @@ public class Parser extends AbstractParser {
         int lastTokenFinish = Token.descPosition(lastTokenWithDelimiter) + (Token.descType(lastTokenWithDelimiter) == TokenType.EOL ? 0 : Token.descLength(lastTokenWithDelimiter));
 
         final FunctionNode functionNode = new FunctionNode(
-                        source,
-                        functionLine,
-                        body.getToken(),
-                        lastTokenFinish,
-                        startToken,
-                        function.getLastToken(),
-                        ident,
-                        function.getName(),
-                        function.getLength(),
-                        function.getParameterCount(),
-                        optimizeList(function.getParameters()),
-                        function.getFlags(),
-                        body,
-                        function.getEndParserState(),
-                        function.getModule(),
-                        function.getInternalName());
+                source,
+                functionLine,
+                body.getToken(),
+                lastTokenFinish,
+                startToken,
+                function.getLastToken(),
+                ident,
+                function.getName(),
+                function.getLength(),
+                function.getParameterCount(),
+                optimizeList(function.getParameters()),
+                function.getFlags(),
+                body,
+                function.getEndParserState(),
+                function.getModule(),
+                function.getInternalName());
 
         return functionNode;
     }
@@ -868,7 +904,7 @@ public class Parser extends AbstractParser {
     /**
      * Verify an assignment expression.
      *
-     * @param op Operation token.
+     * @param op  Operation token.
      * @param lhs Left hand side expression.
      * @param rhs Right hand side expression.
      * @return Verified expression.
@@ -1007,9 +1043,9 @@ public class Parser extends AbstractParser {
      * Reduce increment/decrement to simpler operations.
      *
      * @param firstToken First token.
-     * @param tokenType Operation token (INCPREFIX/DEC.)
+     * @param tokenType  Operation token (INCPREFIX/DEC.)
      * @param expression Left hand side expression.
-     * @param isPostfix Prefix or postfix.
+     * @param isPostfix  Prefix or postfix.
      * @return Reduced expression.
      */
     private static UnaryNode incDecExpression(final long firstToken, final TokenType tokenType, final Expression expression, final boolean isPostfix) {
@@ -1041,13 +1077,13 @@ public class Parser extends AbstractParser {
         final IdentNode ident = null;
         final List<IdentNode> parameters = createFunctionNodeParameters(argumentNames);
         final ParserContextFunctionNode script = createParserContextFunctionNode(
-                        ident,
-                        functionToken,
-                        FunctionNode.IS_SCRIPT,
-                        functionLine,
-                        parameters,
-                        parameters.size(),
-                        topScope);
+                ident,
+                functionToken,
+                FunctionNode.IS_SCRIPT,
+                functionLine,
+                parameters,
+                parameters.size(),
+                topScope);
         script.setInternalName(scriptName);
 
         lc.push(script);
@@ -1310,13 +1346,13 @@ public class Parser extends AbstractParser {
     }
 
     /**
-     * @param topLevel does this statement occur at the "top level" of a script or a function?
-     * @param reparseFlags reparse flags to decide whether to allow property "get" and "set"
-     *            functions or ES6 methods.
+     * @param topLevel        does this statement occur at the "top level" of a script or a function?
+     * @param reparseFlags    reparse flags to decide whether to allow property "get" and "set"
+     *                        functions or ES6 methods.
      * @param singleStatement are we in a single statement context?
      */
     private void statement(final boolean topLevel, final int reparseFlags, final boolean singleStatement, final boolean labelledStatement, final boolean mayBeFunctionDeclaration,
-                    final boolean maybeLabeledFunctionDeclaration) {
+                           final boolean maybeLabeledFunctionDeclaration) {
         switch (type) {
             case LBRACE:
                 block();
@@ -1599,7 +1635,7 @@ public class Parser extends AbstractParser {
             int staticFieldCount = 0;
             boolean hasPrivateMethods = false;
             boolean hasPrivateInstanceMethods = false;
-            for (;;) {
+            for (; ; ) {
                 if (type == SEMICOLON) {
                     next();
                     continue;
@@ -1668,7 +1704,7 @@ public class Parser extends AbstractParser {
                             // try to merge consecutive getter and setter pairs
                             PropertyNode lastElement = classElements.get(classElements.size() - 1);
                             if (!lastElement.isComputed() && lastElement.isAccessor() && isStatic == lastElement.isStatic() &&
-                                            !lastElement.isPrivate() && classElement.getKeyName().equals(lastElement.getKeyName())) {
+                                    !lastElement.isPrivate() && classElement.getKeyName().equals(lastElement.getKeyName())) {
                                 PropertyNode merged = classElement.getGetter() != null ? lastElement.setGetter(classElement.getGetter()) : lastElement.setSetter(classElement.getSetter());
                                 classElements.set(classElements.size() - 1, merged);
                                 continue;
@@ -1711,8 +1747,8 @@ public class Parser extends AbstractParser {
                     flags |= FunctionNode.IS_ANONYMOUS;
                 }
                 constructor = constructor.setValue(new FunctionNode(ctor.getSource(), ctor.getLineNumber(), ctor.getToken(), classFinish, classToken, lastToken, className,
-                                className == null ? "" : className.getName(),
-                                ctor.getLength(), ctor.getNumOfParams(), ctor.getParameters(), flags, ctor.getBody(), ctor.getEndParserState(), ctor.getModule(), ctor.getInternalName()));
+                        className == null ? "" : className.getName(),
+                        ctor.getLength(), ctor.getNumOfParams(), ctor.getParameters(), flags, ctor.getBody(), ctor.getEndParserState(), ctor.getModule(), ctor.getInternalName()));
             }
 
             IdentNode invalidPrivateIdent = classNode.verifyAllPrivateIdentifiersValid(lc);
@@ -1727,7 +1763,7 @@ public class Parser extends AbstractParser {
 
             classScope.close();
             return new ClassNode(classToken, classFinish, className, classHeritage, constructor, classElements, classScope,
-                            instanceFieldCount, staticFieldCount, hasPrivateMethods, hasPrivateInstanceMethods);
+                    instanceFieldCount, staticFieldCount, hasPrivateMethods, hasPrivateInstanceMethods);
         } finally {
             lc.pop(classNode);
         }
@@ -1858,13 +1894,13 @@ public class Parser extends AbstractParser {
         }
 
         PropertyNode constructor = new PropertyNode(classToken, ctorFinish, new IdentNode(identToken, ctorFinish, CONSTRUCTOR_NAME),
-                        createFunctionNode(function, classToken, className, classLineNumber, body),
-                        null, null, false, false, false, false);
+                createFunctionNode(function, classToken, className, classLineNumber, body),
+                null, null, false, false, false, false);
         return constructor;
     }
 
     private PropertyNode methodDefinition(Expression propertyName, boolean isStatic, boolean derived, boolean generator, boolean async, long startToken, int methodLine, boolean yield,
-                    boolean await, TokenType nameTokenType, boolean computed) {
+                                          boolean await, TokenType nameTokenType, boolean computed) {
         int flags = FunctionNode.IS_METHOD;
         if (!computed) {
             final String name = ((PropertyKey) propertyName).getPropertyName();
@@ -2025,7 +2061,8 @@ public class Parser extends AbstractParser {
      */
     private void statementList() {
         // Accumulate statements until end of the statement list.
-        loop: while (type != EOF) {
+        loop:
+        while (type != EOF) {
             switch (type) {
                 case EOF:
                 case CASE:
@@ -2092,7 +2129,7 @@ public class Parser extends AbstractParser {
     /**
      * Make sure that in strict mode, the identifier name used is allowed.
      *
-     * @param ident Identifier that is verified
+     * @param ident         Identifier that is verified
      * @param contextString String used in error message to give context to the user
      */
     private void verifyStrictIdent(final IdentNode ident, final String contextString, final boolean bindingIdentifier) {
@@ -2162,11 +2199,17 @@ public class Parser extends AbstractParser {
     }
 
     private static final class ForVariableDeclarationListResult {
-        /** First missing const or binding pattern initializer. */
+        /**
+         * First missing const or binding pattern initializer.
+         */
         Expression missingAssignment;
-        /** First declaration with an initializer. */
+        /**
+         * First declaration with an initializer.
+         */
         long declarationWithInitializerToken;
-        /** Destructuring assignments. */
+        /**
+         * Destructuring assignments.
+         */
         Expression init;
         Expression firstBinding;
         Expression secondBinding;
@@ -2203,7 +2246,7 @@ public class Parser extends AbstractParser {
 
     /**
      * @param isStatement {@code true} if a VariableStatement, {@code false} if a {@code for} loop
-     *            VariableDeclarationList
+     *                    VariableDeclarationList
      */
     private ForVariableDeclarationListResult variableDeclarationList(final TokenType varType, final boolean isStatement, final int sourceOrder) {
         // VAR tested in caller.
@@ -2329,8 +2372,8 @@ public class Parser extends AbstractParser {
         }
         if (varNode.isBlockScoped()) {
             int symbolFlags = varNode.getSymbolFlags() |
-                            (scope.isSwitchBlockScope() ? Symbol.IS_DECLARED_IN_SWITCH_BLOCK : 0) |
-                            (varNode.isFunctionDeclaration() ? Symbol.IS_BLOCK_FUNCTION_DECLARATION : 0);
+                    (scope.isSwitchBlockScope() ? Symbol.IS_DECLARED_IN_SWITCH_BLOCK : 0) |
+                    (varNode.isFunctionDeclaration() ? Symbol.IS_BLOCK_FUNCTION_DECLARATION : 0);
             scope.putSymbol(new Symbol(name, symbolFlags));
 
             if (varNode.isFunctionDeclaration() && isAnnexB()) {
@@ -2352,8 +2395,8 @@ public class Parser extends AbstractParser {
             ParserContextFunctionNode function = lc.getCurrentFunction();
             Scope varScope = function.getBodyScope();
             int symbolFlags = varNode.getSymbolFlags() |
-                            (varNode.isHoistableDeclaration() ? Symbol.IS_HOISTABLE_DECLARATION : 0) |
-                            (varScope.isGlobalScope() ? Symbol.IS_GLOBAL : 0);
+                    (varNode.isHoistableDeclaration() ? Symbol.IS_HOISTABLE_DECLARATION : 0) |
+                    (varScope.isGlobalScope() ? Symbol.IS_GLOBAL : 0);
             // if the var name appears in a non-simple parameter list, we need to copy its value.
             if (function.hasParameterExpressions() && function.getParameterBlock().getScope().hasSymbol(name)) {
                 symbolFlags |= Symbol.IS_VAR_REDECLARED_HERE;
@@ -2589,9 +2632,9 @@ public class Parser extends AbstractParser {
 
     /**
      * ExpressionStatement : Expression ; // [lookahead ~( or function )]
-     *
+     * <p>
      * See 12.4
-     *
+     * <p>
      * Parse an expression used in a statement block.
      */
     private void expressionStatement() {
@@ -2871,7 +2914,7 @@ public class Parser extends AbstractParser {
 
     private TokenType lookaheadOfLetDeclaration() {
         assert type == LET;
-        for (int i = 1;; i++) {
+        for (int i = 1; ; i++) {
             TokenType t = T(k + i);
             switch (t) {
                 case EOL:
@@ -3338,13 +3381,13 @@ public class Parser extends AbstractParser {
 
             if (switchStatement != null) {
                 appendStatement(new BlockStatement(switchLine,
-                                new Block(switchToken, switchStatement.getFinish(), switchBlock.getFlags() | Block.IS_SYNTHETIC | Block.IS_SWITCH_BLOCK, switchBlock.getScope(), switchStatement)));
+                        new Block(switchToken, switchStatement.getFinish(), switchBlock.getFlags() | Block.IS_SYNTHETIC | Block.IS_SWITCH_BLOCK, switchBlock.getScope(), switchStatement)));
             }
             if (outerBlock != null) {
                 restoreBlock(outerBlock);
                 if (switchStatement != null) {
                     appendStatement(new BlockStatement(switchLine,
-                                    new Block(switchToken, switchStatement.getFinish(), outerBlock.getFlags() | Block.IS_SYNTHETIC, outerBlock.getScope(), outerBlock.getStatements())));
+                            new Block(switchToken, switchStatement.getFinish(), outerBlock.getFlags() | Block.IS_SYNTHETIC, outerBlock.getScope(), outerBlock.getStatements())));
                 }
             }
         }
@@ -3720,7 +3763,8 @@ public class Parser extends AbstractParser {
         boolean elision = true;
         boolean hasSpread = false;
         boolean hasCoverInitializedName = false;
-        loop: while (true) {
+        loop:
+        while (true) {
             long spreadToken = 0;
             switch (type) {
                 case RBRACKET:
@@ -3802,7 +3846,8 @@ public class Parser extends AbstractParser {
         // Create a block for the object literal.
         boolean commaSeen = true;
         boolean hasCoverInitializedName = false;
-        loop: while (true) {
+        loop:
+        while (true) {
             switch (type) {
                 case RBRACE:
                     next();
@@ -3877,11 +3922,11 @@ public class Parser extends AbstractParser {
 
     private static boolean hasCoverInitializedName(Expression value) {
         return (value != null && ((value instanceof ObjectNode && ((ObjectNode) value).hasCoverInitializedName()) ||
-                        (value instanceof ArrayLiteralNode && ((ArrayLiteralNode) value).hasCoverInitializedName())));
+                (value instanceof ArrayLiteralNode && ((ArrayLiteralNode) value).hasCoverInitializedName())));
     }
 
     private void checkPropertyRedefinition(final PropertyNode property, final Expression value, final FunctionNode getter, final FunctionNode setter,
-                    final Expression prevValue, final FunctionNode prevGetter, final FunctionNode prevSetter) {
+                                           final Expression prevValue, final FunctionNode prevGetter, final FunctionNode prevSetter) {
         // ECMA 11.1.5 strict mode restrictions
         if (isStrictMode && value != null && prevValue != null) {
             throw error(AbstractParser.message(MESSAGE_PROPERTY_REDEFINITON, property.getKeyName()), property.getToken());
@@ -4102,8 +4147,8 @@ public class Parser extends AbstractParser {
         expect(RPAREN);
 
         int functionFlags = FunctionNode.IS_GETTER | FunctionNode.IS_METHOD |
-                        (computed ? FunctionNode.IS_ANONYMOUS : 0);
-        final ParserContextFunctionNode functionNode = createParserContextFunctionNode(getterName, getSetToken, functionFlags, functionLine, Collections.<IdentNode> emptyList(), 0);
+                (computed ? FunctionNode.IS_ANONYMOUS : 0);
+        final ParserContextFunctionNode functionNode = createParserContextFunctionNode(getterName, getSetToken, functionFlags, functionLine, Collections.<IdentNode>emptyList(), 0);
         lc.push(functionNode);
 
         Block functionBody;
@@ -4115,11 +4160,11 @@ public class Parser extends AbstractParser {
         }
 
         final FunctionNode function = createFunctionNode(
-                        functionNode,
-                        getSetToken,
-                        getterName,
-                        functionLine,
-                        functionBody);
+                functionNode,
+                getSetToken,
+                getterName,
+                functionLine,
+                functionBody);
 
         return new PropertyFunction(propertyName, function, computed);
     }
@@ -4132,7 +4177,7 @@ public class Parser extends AbstractParser {
         expect(LPAREN);
 
         int functionFlags = FunctionNode.IS_SETTER | FunctionNode.IS_METHOD |
-                        (computed ? FunctionNode.IS_ANONYMOUS : 0);
+                (computed ? FunctionNode.IS_ANONYMOUS : 0);
         final ParserContextFunctionNode functionNode = createParserContextFunctionNode(setterName, getSetToken, functionFlags, functionLine);
         lc.push(functionNode);
 
@@ -4158,11 +4203,11 @@ public class Parser extends AbstractParser {
         }
 
         final FunctionNode function = createFunctionNode(
-                        functionNode,
-                        getSetToken,
-                        setterName,
-                        functionLine,
-                        functionBody);
+                functionNode,
+                getSetToken,
+                setterName,
+                functionLine,
+                functionBody);
 
         return new PropertyFunction(propertyName, function, computed);
     }
@@ -4173,9 +4218,9 @@ public class Parser extends AbstractParser {
         expect(LPAREN);
 
         int functionFlags = flags |
-                        (computed ? FunctionNode.IS_ANONYMOUS : 0) |
-                        (generator ? FunctionNode.IS_GENERATOR : 0) |
-                        (async ? FunctionNode.IS_ASYNC : 0);
+                (computed ? FunctionNode.IS_ANONYMOUS : 0) |
+                (generator ? FunctionNode.IS_GENERATOR : 0) |
+                (async ? FunctionNode.IS_ASYNC : 0);
         final ParserContextFunctionNode functionNode = createParserContextFunctionNode(methodNameNode, methodToken, functionFlags, methodLine);
         lc.push(functionNode);
 
@@ -4198,11 +4243,11 @@ public class Parser extends AbstractParser {
             }
 
             final FunctionNode function = createFunctionNode(
-                            functionNode,
-                            methodToken,
-                            methodNameNode,
-                            methodLine,
-                            functionBody);
+                    functionNode,
+                    methodToken,
+                    methodNameNode,
+                    methodLine,
+                    functionBody);
             return new PropertyFunction(key, function, computed);
         } finally {
             lc.pop(functionNode);
@@ -4330,7 +4375,7 @@ public class Parser extends AbstractParser {
                     markSuperCall();
                 }
             } else if (lhs instanceof AccessNode && !((AccessNode) lhs).isPrivate() && arguments.size() == 2 && arguments.get(1) instanceof IdentNode &&
-                            ((IdentNode) arguments.get(1)).isArguments() && APPLY_NAME.equals(((AccessNode) lhs).getProperty())) {
+                    ((IdentNode) arguments.get(1)).isArguments() && APPLY_NAME.equals(((AccessNode) lhs).getProperty())) {
                 if (markApplyArgumentsCall(lc, arguments)) {
                     applyArguments = true;
                 }
@@ -4340,7 +4385,8 @@ public class Parser extends AbstractParser {
         }
 
         boolean optionalChain = false;
-        loop: while (true) {
+        loop:
+        while (true) {
             // Capture token.
             callLine = line;
             callToken = token;
@@ -4610,7 +4656,8 @@ public class Parser extends AbstractParser {
                 break;
         }
 
-        loop: while (true) {
+        loop:
+        while (true) {
             // Capture token.
             final long callToken = token;
 
@@ -4824,9 +4871,7 @@ public class Parser extends AbstractParser {
      *      function Identifier? ( FormalParameterList? ) { FunctionBody }
      * </pre>
      *
-     *
      * @param isStatement true if parsing in a statement context.
-     *
      * @return Expression node.
      */
     private Expression functionExpression(final boolean isStatement, final boolean topLevel, final boolean async, final long functionToken, final boolean expressionStatement) {
@@ -4865,8 +4910,8 @@ public class Parser extends AbstractParser {
 
         boolean isAnonymous = name == null;
         int functionFlags = (generator ? FunctionNode.IS_GENERATOR : 0) |
-                        (async ? FunctionNode.IS_ASYNC : 0) |
-                        (isAnonymous ? FunctionNode.IS_ANONYMOUS : 0);
+                (async ? FunctionNode.IS_ASYNC : 0) |
+                (isAnonymous ? FunctionNode.IS_ANONYMOUS : 0);
         final ParserContextFunctionNode functionNode = createParserContextFunctionNode(name, functionToken, functionFlags, functionLine);
         if (isAnonymous) {
             // name is null, generate anonymous name
@@ -4916,11 +4961,11 @@ public class Parser extends AbstractParser {
         verifyParameterList(functionNode);
 
         final FunctionNode function = createFunctionNode(
-                        functionNode,
-                        functionToken,
-                        name,
-                        functionLine,
-                        functionBody);
+                functionNode,
+                functionToken,
+                name,
+                functionLine,
+                functionBody);
 
         if (isStatement) {
             if (isAnonymous) {
@@ -5290,7 +5335,7 @@ public class Parser extends AbstractParser {
              * for consistency's sake we'll throw away nested bodies early if we were supposed to
              * skip 'em.
              */
-            body.setStatements(Collections.<Statement> emptyList());
+            body.setStatements(Collections.<Statement>emptyList());
         }
 
         if (reparsedFunction != null) {
@@ -5378,7 +5423,7 @@ public class Parser extends AbstractParser {
         }
 
         Lexer createLexer(final Source source, final Lexer lexer, final TokenStream stream,
-                        final boolean scripting, final int ecmaScriptVersion, final boolean shebang, final boolean isModule, final boolean allowBigInt) {
+                          final boolean scripting, final int ecmaScriptVersion, final boolean shebang, final boolean isModule, final boolean allowBigInt) {
             final Lexer newLexer = new Lexer(source, position, lexer.limit - position, stream, scripting, ecmaScriptVersion, shebang, isModule, true, allowBigInt);
             newLexer.restoreState(new Lexer.State(position, Integer.MAX_VALUE, line, -1, linePosition, SEMICOLON));
             return newLexer;
@@ -5530,93 +5575,93 @@ public class Parser extends AbstractParser {
 
     /**
      * Parse Expression.
-     *
+     * <p>
      * {@code
      * MultiplicativeExpression :
-     *      UnaryExpression
-     *      MultiplicativeExpression * UnaryExpression
-     *      MultiplicativeExpression / UnaryExpression
-     *      MultiplicativeExpression % UnaryExpression
-     *
+     * UnaryExpression
+     * MultiplicativeExpression * UnaryExpression
+     * MultiplicativeExpression / UnaryExpression
+     * MultiplicativeExpression % UnaryExpression
+     * <p>
      * See 11.5
-     *
+     * <p>
      * AdditiveExpression :
-     *      MultiplicativeExpression
-     *      AdditiveExpression + MultiplicativeExpression
-     *      AdditiveExpression - MultiplicativeExpression
-     *
+     * MultiplicativeExpression
+     * AdditiveExpression + MultiplicativeExpression
+     * AdditiveExpression - MultiplicativeExpression
+     * <p>
      * See 11.6
-     *
+     * <p>
      * ShiftExpression :
-     *      AdditiveExpression
-     *      ShiftExpression << AdditiveExpression
-     *      ShiftExpression >> AdditiveExpression
-     *      ShiftExpression >>> AdditiveExpression
-     *
+     * AdditiveExpression
+     * ShiftExpression << AdditiveExpression
+     * ShiftExpression >> AdditiveExpression
+     * ShiftExpression >>> AdditiveExpression
+     * <p>
      * See 11.7
-     *
+     * <p>
      * RelationalExpression :
-     *      ShiftExpression
-     *      RelationalExpression < ShiftExpression
-     *      RelationalExpression > ShiftExpression
-     *      RelationalExpression <= ShiftExpression
-     *      RelationalExpression >= ShiftExpression
-     *      RelationalExpression instanceof ShiftExpression
-     *      RelationalExpression in ShiftExpression // if !noIf
-     *
+     * ShiftExpression
+     * RelationalExpression < ShiftExpression
+     * RelationalExpression > ShiftExpression
+     * RelationalExpression <= ShiftExpression
+     * RelationalExpression >= ShiftExpression
+     * RelationalExpression instanceof ShiftExpression
+     * RelationalExpression in ShiftExpression // if !noIf
+     * <p>
      * See 11.8
-     *
-     *      RelationalExpression
-     *      EqualityExpression == RelationalExpression
-     *      EqualityExpression != RelationalExpression
-     *      EqualityExpression === RelationalExpression
-     *      EqualityExpression !== RelationalExpression
-     *
+     * <p>
+     * RelationalExpression
+     * EqualityExpression == RelationalExpression
+     * EqualityExpression != RelationalExpression
+     * EqualityExpression === RelationalExpression
+     * EqualityExpression !== RelationalExpression
+     * <p>
      * See 11.9
-     *
+     * <p>
      * BitwiseANDExpression :
-     *      EqualityExpression
-     *      BitwiseANDExpression & EqualityExpression
-     *
+     * EqualityExpression
+     * BitwiseANDExpression & EqualityExpression
+     * <p>
      * BitwiseXORExpression :
-     *      BitwiseANDExpression
-     *      BitwiseXORExpression ^ BitwiseANDExpression
-     *
+     * BitwiseANDExpression
+     * BitwiseXORExpression ^ BitwiseANDExpression
+     * <p>
      * BitwiseORExpression :
-     *      BitwiseXORExpression
-     *      BitwiseORExpression | BitwiseXORExpression
-     *
+     * BitwiseXORExpression
+     * BitwiseORExpression | BitwiseXORExpression
+     * <p>
      * See 11.10
-     *
+     * <p>
      * LogicalANDExpression :
-     *      BitwiseORExpression
-     *      LogicalANDExpression && BitwiseORExpression
-     *
+     * BitwiseORExpression
+     * LogicalANDExpression && BitwiseORExpression
+     * <p>
      * LogicalORExpression :
-     *      LogicalANDExpression
-     *      LogicalORExpression || LogicalANDExpression
-     *
+     * LogicalANDExpression
+     * LogicalORExpression || LogicalANDExpression
+     * <p>
      * See 11.11
-     *
+     * <p>
      * ConditionalExpression :
-     *      LogicalORExpression
-     *      LogicalORExpression ? AssignmentExpression : AssignmentExpression
-     *
+     * LogicalORExpression
+     * LogicalORExpression ? AssignmentExpression : AssignmentExpression
+     * <p>
      * See 11.12
-     *
+     * <p>
      * AssignmentExpression :
-     *      ConditionalExpression
-     *      LeftHandSideExpression AssignmentOperator AssignmentExpression
-     *
+     * ConditionalExpression
+     * LeftHandSideExpression AssignmentOperator AssignmentExpression
+     * <p>
      * AssignmentOperator :
-     *      = *= /= %= += -= <<= >>= >>>= &= ^= |=
-     *
+     * = *= /= %= += -= <<= >>= >>>= &= ^= |=
+     * <p>
      * See 11.13
-     *
+     * <p>
      * Expression :
-     *      AssignmentExpression
-     *      Expression , AssignmentExpression
-     *
+     * AssignmentExpression
+     * Expression , AssignmentExpression
+     * <p>
      * See 11.14
      * }
      *
@@ -5797,7 +5842,7 @@ public class Parser extends AbstractParser {
 
     /**
      * AssignmentExpression.
-     *
+     * <p>
      * AssignmentExpression[In, Yield] : ConditionalExpression[?In, ?Yield] [+Yield]
      * YieldExpression[?In] ArrowFunction[?In, ?Yield] AsyncArrowFunction
      * LeftHandSideExpression[?Yield] = AssignmentExpression[?In, ?Yield]
@@ -5873,8 +5918,8 @@ public class Parser extends AbstractParser {
     /**
      * ArrowFunction.
      *
-     * @param startToken start token of the ArrowParameters expression
-     * @param functionLine start line of the arrow function
+     * @param startToken    start token of the ArrowParameters expression
+     * @param functionLine  start line of the arrow function
      * @param paramListExpr ArrowParameters expression or {@code null} for {@code ()} (empty list)
      */
     private Expression arrowFunction(final long startToken, final int functionLine, final Expression paramListExpr, boolean async) {
@@ -5911,11 +5956,11 @@ public class Parser extends AbstractParser {
             }
 
             final FunctionNode function = createFunctionNode(
-                            functionNode,
-                            functionToken,
-                            name,
-                            functionLine,
-                            functionBody);
+                    functionNode,
+                    functionToken,
+                    name,
+                    functionLine,
+                    functionBody);
             return function;
         } finally {
             lc.pop(functionNode);
@@ -6134,7 +6179,7 @@ public class Parser extends AbstractParser {
         assert type == ELLIPSIS;
         // find IDENT, RPAREN, ARROW, in that order, skipping over EOL (where allowed) and COMMENT
         int i = 1;
-        for (;;) {
+        for (; ; ) {
             TokenType t = T(k + i++);
             if (t == IDENT) {
                 break;
@@ -6146,7 +6191,7 @@ public class Parser extends AbstractParser {
                 return false;
             }
         }
-        for (;;) {
+        for (; ; ) {
             TokenType t = T(k + i++);
             if (t == RPAREN) {
                 break;
@@ -6156,7 +6201,7 @@ public class Parser extends AbstractParser {
                 return false;
             }
         }
-        for (;;) {
+        for (; ; ) {
             TokenType t = T(k + i++);
             if (t == ARROW) {
                 break;
@@ -6172,7 +6217,7 @@ public class Parser extends AbstractParser {
     private boolean lookaheadIsArrow() {
         // find ARROW, skipping over COMMENT
         int i = 1;
-        for (;;) {
+        for (; ; ) {
             TokenType t = T(k + i++);
             if (t == ARROW) {
                 break;
@@ -6330,11 +6375,11 @@ public class Parser extends AbstractParser {
         final Scope moduleScope = Scope.createModule();
         final IdentNode ident = null;
         final ParserContextFunctionNode script = createParserContextFunctionNode(
-                        ident,
-                        functionToken,
-                        FunctionNode.IS_MODULE,
-                        functionLine,
-                        Collections.<IdentNode> emptyList(), 0, moduleScope);
+                ident,
+                functionToken,
+                FunctionNode.IS_MODULE,
+                functionLine,
+                Collections.<IdentNode>emptyList(), 0, moduleScope);
         script.setInternalName(moduleName);
 
         lc.push(script);
@@ -6385,7 +6430,8 @@ public class Parser extends AbstractParser {
      * </pre>
      */
     private void moduleBody(ParserContextModuleNode module) {
-        loop: while (type != EOF) {
+        loop:
+        while (type != EOF) {
             switch (type) {
                 case EOF:
                     break loop;
@@ -6474,7 +6520,7 @@ public class Parser extends AbstractParser {
                 NameSpaceImportNode namespaceNode = nameSpaceImport();
                 importClause = new ImportClauseNode(startToken, Token.descPosition(startToken), finish, namespaceNode);
                 importEntries = Collections.singletonList(
-                                ImportEntry.importStarAsNameSpaceFrom(namespaceNode.getBindingIdentifier().getName()));
+                        ImportEntry.importStarAsNameSpaceFrom(namespaceNode.getBindingIdentifier().getName()));
             } else if (type == LBRACE) {
                 NamedImportsNode namedImportsNode = namedImports();
                 importClause = new ImportClauseNode(startToken, Token.descPosition(startToken), finish, namedImportsNode);
@@ -6698,7 +6744,7 @@ public class Parser extends AbstractParser {
                     }
                 }
                 VarNode varNode = new VarNode(lineNumber, Token.recast(rhsToken, hoistableDeclaration ? VAR : LET), finish, ident, assignmentExpression,
-                                (hoistableDeclaration ? 0 : VarNode.IS_LET) | VarNode.IS_EXPORT);
+                        (hoistableDeclaration ? 0 : VarNode.IS_LET) | VarNode.IS_EXPORT);
                 declareVar(lc.getCurrentScope(), varNode);
                 if (hoistableDeclaration) {
                     functionDeclarations.add(varNode);
@@ -6801,6 +6847,55 @@ public class Parser extends AbstractParser {
 
     private static boolean isReservedWord(TokenType type) {
         return type.getKind() == TokenKind.KEYWORD || type.getKind() == TokenKind.FUTURE || type.getKind() == TokenKind.FUTURESTRICT;
+    }
+
+    /**
+     * Parse a decorator.
+     *
+     * <pre>
+     * DecoratorList[Yield, Await] :
+     *      DecoratorList[?Yield, Await]opt Decorator[?Yield, ?Await]
+     *
+     * Decorator[Yield, Await] :
+     *      {@literal @} DecoratorMemeberExpression[?Yield, ?Await]
+     *      {@literal @} DecoratorCallExpression[?Yield, ?Await]
+     *
+     * DecoratorMemberExpression[Yield, Await] :
+     *      IdentifierReference[?Yield, ?Await]
+     *      DecoratorMemberExpression[?Yield, ?Await] . IdentifierName
+     *      ( Expression[+In, ?Yield, ?Await] )
+     *
+     * DecoratorCallExpression[Yield, Await] :
+     *      DecoratorMemberExpression[?Yield, ?Await] Arguments[?Yield, ?Await]
+     * </pre>
+     */
+    public void decoratorList(boolean yield, boolean await) {
+        List<Expression> decoratorList = new ArrayList<>();
+        while (type == AT) {
+            next();
+            Expression decoratorExpression;
+
+            if (type == LPAREN) {
+                next();
+                decoratorExpression = expression(false, yield, await);
+                expect(RPAREN);
+            } else {
+                decoratorExpression = identifierReference(yield, await);
+            }
+            long callToken = token;
+            while (type == PERIOD) {
+                next();
+                final IdentNode property = getIdentifierName();
+                decoratorExpression = new AccessNode(callToken, finish, decoratorExpression, property.getName());
+            }
+            if (type == LPAREN) {
+                final int callLine = line;
+                callToken = token;
+                final List<Expression> arguments = argumentList(yield, await);
+                decoratorExpression = CallNode.forCall(callLine, callToken, decoratorExpression.getStart(), finish, decoratorExpression, arguments);
+            }
+            decoratorList.add(decoratorExpression);
+        }
     }
 
     @Override
@@ -6929,7 +7024,7 @@ public class Parser extends AbstractParser {
         assert isAsync();
         // find [no LineTerminator here] (IDENT || LPAREN)
         int i = 1;
-        for (;;) {
+        for (; ; ) {
             TokenType t = T(k + i++);
             if (t == LPAREN) {
                 break;
@@ -6949,7 +7044,7 @@ public class Parser extends AbstractParser {
     private boolean lookaheadIsAsyncFunction() {
         assert isAsync();
         // find [no LineTerminator here] FUNCTION
-        for (int i = 1;; i++) {
+        for (int i = 1; ; i++) {
             long currentToken = getToken(k + i);
             TokenType t = Token.descType(currentToken);
             switch (t) {
@@ -6967,7 +7062,7 @@ public class Parser extends AbstractParser {
         assert isAsync();
         // find [no LineTerminator here] ClassElementName
         // find [no LineTerminator here] *
-        for (int i = 1;; i++) {
+        for (int i = 1; ; i++) {
             long currentToken = getToken(k + i);
             TokenType t = Token.descType(currentToken);
             if (t == COMMENT) {
