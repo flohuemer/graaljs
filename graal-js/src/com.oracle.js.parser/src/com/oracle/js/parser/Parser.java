@@ -1570,7 +1570,7 @@ public class Parser extends AbstractParser {
      * @return Class expression node.
      */
     private ClassNode classExpression(boolean yield, boolean await) {
-        if(type == AT) {
+        if (type == AT) {
             decoratorList(yield, await);
         }
 
@@ -1652,8 +1652,10 @@ public class Parser extends AbstractParser {
                 if (type == RBRACE) {
                     break;
                 }
+                List<Expression> decorators = null;
+                final long decoratorToken = token;
                 if (type == AT) {
-                    decoratorList(yield, await);
+                    decorators = decoratorList(yield, await);
                 }
 
                 boolean isStatic = false;
@@ -1734,6 +1736,9 @@ public class Parser extends AbstractParser {
 
                 if (!classElement.isStatic() && !classElement.isComputed() && classElement.getKeyName().equals(CONSTRUCTOR_NAME)) {
                     assert !classElement.isClassField();
+                    if(decorators != null) {
+                        throw error(AbstractParser.message("constructor.decorators"), decoratorToken);
+                    }
                     if (constructor == null) {
                         constructor = classElement;
                     } else {
@@ -6885,7 +6890,7 @@ public class Parser extends AbstractParser {
      *      DecoratorMemberExpression[?Yield, ?Await] Arguments[?Yield, ?Await]
      * </pre>
      */
-    public void decoratorList(boolean yield, boolean await) {
+    public List<Expression> decoratorList(boolean yield, boolean await) {
         List<Expression> decoratorList = new ArrayList<>();
         while (type == AT) {
             next();
@@ -6912,6 +6917,7 @@ public class Parser extends AbstractParser {
             }
             decoratorList.add(decoratorExpression);
         }
+        return decoratorList;
     }
 
     @Override
