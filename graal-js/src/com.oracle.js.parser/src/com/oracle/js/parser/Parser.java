@@ -1704,7 +1704,7 @@ public class Parser extends AbstractParser {
                             elementNameToIndexMap.put(classElement.getKeyName(), classElements.size());
                         } else {
                             PropertyNode existing = classElements.get(existingIndex);
-                            if (existing.isAccessor() == classElement.isAccessor() && existing.isProto() == classElement.isProto() && existing.isStatic() == classElement.isStatic()) {
+                            if (existing.isAccessor() == classElement.isAccessor() && existing.isStatic() == classElement.isStatic()) {
                                 if (existing.isAccessor()) {
                                     if (existing.getDecorators() != null && classElement.getDecorators() != null) {
                                         //throw error;
