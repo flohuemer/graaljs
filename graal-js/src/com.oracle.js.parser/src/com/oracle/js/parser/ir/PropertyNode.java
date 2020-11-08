@@ -45,6 +45,8 @@ import com.oracle.js.parser.TokenType;
 import com.oracle.js.parser.ir.visitor.NodeVisitor;
 import com.oracle.js.parser.ir.visitor.TranslatorNodeVisitor;
 
+import java.util.List;
+
 /**
  * IR representation of an object literal property.
  */
@@ -74,9 +76,21 @@ public final class PropertyNode extends Node {
 
     private final boolean isAnonymousFunctionDefinition;
 
+    private final List<Expression> decorators;
+
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
+                        boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators) {
+        this(token,finish, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, false,false, decorators);
+    }
+
     public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
                     boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto) {
-        this(token, finish, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, false, false);
+        this(token, finish, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, false, false, null);
+    }
+
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
+                        boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition) {
+        this(token,finish,key,value,getter,setter,isStatic,computed,coverInitializedName,proto,classField,isAnonymousFunctionDefinition,null);
     }
 
     /**
@@ -90,7 +104,7 @@ public final class PropertyNode extends Node {
      * @param setter setter function body
      */
     public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
-                    boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition) {
+                    boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition, List<Expression> decorators) {
         super(token, finish);
         this.key = key;
         this.value = value;
@@ -102,6 +116,7 @@ public final class PropertyNode extends Node {
         this.proto = proto;
         this.classField = classField;
         this.isAnonymousFunctionDefinition = isAnonymousFunctionDefinition;
+        this.decorators = decorators;
     }
 
     private PropertyNode(PropertyNode propertyNode, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
@@ -117,6 +132,7 @@ public final class PropertyNode extends Node {
         this.proto = proto;
         this.classField = propertyNode.classField;
         this.isAnonymousFunctionDefinition = propertyNode.isAnonymousFunctionDefinition;
+        this.decorators = null;
     }
 
     /**
