@@ -120,7 +120,7 @@ public final class PropertyNode extends Node {
     }
 
     private PropertyNode(PropertyNode propertyNode, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
-                    boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto) {
+                    boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators) {
         super(propertyNode);
         this.key = key;
         this.value = value;
@@ -132,7 +132,7 @@ public final class PropertyNode extends Node {
         this.proto = proto;
         this.classField = propertyNode.classField;
         this.isAnonymousFunctionDefinition = propertyNode.isAnonymousFunctionDefinition;
-        this.decorators = null;
+        this.decorators = decorators;
     }
 
     /**
@@ -228,7 +228,7 @@ public final class PropertyNode extends Node {
         if (this.getter == getter) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto);
+        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
     }
 
     /**
@@ -244,7 +244,7 @@ public final class PropertyNode extends Node {
         if (this.key == key) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto);
+        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
     }
 
     /**
@@ -266,7 +266,7 @@ public final class PropertyNode extends Node {
         if (this.setter == setter) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto);
+        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
     }
 
     /**
@@ -288,7 +288,7 @@ public final class PropertyNode extends Node {
         if (this.value == value) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto);
+        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
     }
 
     public boolean isStatic() {

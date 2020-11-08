@@ -1529,8 +1529,9 @@ public class Parser extends AbstractParser {
      * @return Class expression node.
      */
     private ClassNode classDeclaration(boolean yield, boolean await, boolean defaultExport) {
+        List<Expression> classDecorators = new ArrayList<>();
         if (type == AT) {
-            decoratorList(yield, await);
+            classDecorators = decoratorList(yield, await);
         }
 
         assert type == CLASS;
@@ -1546,7 +1547,7 @@ public class Parser extends AbstractParser {
                 className = bindingIdentifier(yield, await, CLASS_NAME_CONTEXT);
             }
 
-            ClassNode classExpression = classTail(classLineNumber, classToken, className, yield, await);
+            ClassNode classExpression = classTail(classLineNumber, classToken, className, yield, await, classDecorators);
 
             if (!defaultExport) {
                 VarNode classVar = new VarNode(classLineNumber, Token.recast(classExpression.getToken(), LET), classExpression.getFinish(), className, classExpression, VarNode.IS_LET);
@@ -1570,8 +1571,9 @@ public class Parser extends AbstractParser {
      * @return Class expression node.
      */
     private ClassNode classExpression(boolean yield, boolean await) {
+        List<Expression> classDecorators = new ArrayList<>();
         if (type == AT) {
-            decoratorList(yield, await);
+            classDecorators = decoratorList(yield, await);
         }
 
         assert type == CLASS;
@@ -1587,7 +1589,7 @@ public class Parser extends AbstractParser {
                 className = bindingIdentifier(yield, await, CLASS_NAME_CONTEXT);
             }
 
-            return classTail(classLineNumber, classToken, className, yield, await);
+            return classTail(classLineNumber, classToken, className, yield, await, classDecorators);
         } finally {
             isStrictMode = oldStrictMode;
         }
@@ -1611,7 +1613,7 @@ public class Parser extends AbstractParser {
      *      ;
      * </pre>
      */
-    private ClassNode classTail(int classLineNumber, long classToken, IdentNode className, boolean yield, boolean await) {
+    private ClassNode classTail(int classLineNumber, long classToken, IdentNode className, boolean yield, boolean await, List<Expression> classDecorators) {
         assert isStrictMode;
         Scope classScope = Scope.createClass(lc.getCurrentScope());
         if (className != null) {
@@ -1781,7 +1783,7 @@ public class Parser extends AbstractParser {
 
             classScope.close();
             return new ClassNode(classToken, classFinish, className, classHeritage, constructor, classElements, classScope,
-                    instanceFieldCount, staticFieldCount, hasPrivateMethods, hasPrivateInstanceMethods);
+                    instanceFieldCount, staticFieldCount, hasPrivateMethods, hasPrivateInstanceMethods, classDecorators);
         } finally {
             lc.pop(classNode);
         }
