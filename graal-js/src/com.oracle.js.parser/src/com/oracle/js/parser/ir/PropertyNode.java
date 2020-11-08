@@ -291,6 +291,25 @@ public final class PropertyNode extends Node {
         return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
     }
 
+    /**
+     * Get the decorators of this property
+     * @return property decorators
+     */
+    public List<Expression> getDecorators() { return decorators; }
+
+    /**
+     * Sets the decorators of this property
+     *
+     * @param decorators new decorators
+     * @return same node or new node if decorators changed
+     */
+    public PropertyNode setDecorators(final List<Expression> decorators) {
+        if(this.decorators == decorators) {
+            return  this;
+        }
+        return  new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
+    }
+
     public boolean isStatic() {
         return isStatic;
     }

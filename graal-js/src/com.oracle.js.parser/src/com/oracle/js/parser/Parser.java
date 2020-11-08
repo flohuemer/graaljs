@@ -1529,7 +1529,7 @@ public class Parser extends AbstractParser {
      * @return Class expression node.
      */
     private ClassNode classDeclaration(boolean yield, boolean await, boolean defaultExport) {
-        List<Expression> classDecorators = new ArrayList<>();
+        List<Expression> classDecorators = null;
         if (type == AT) {
             classDecorators = decoratorList(yield, await);
         }
@@ -1571,7 +1571,7 @@ public class Parser extends AbstractParser {
      * @return Class expression node.
      */
     private ClassNode classExpression(boolean yield, boolean await) {
-        List<Expression> classDecorators = new ArrayList<>();
+        List<Expression> classDecorators = null;
         if (type == AT) {
             classDecorators = decoratorList(yield, await);
         }
@@ -1641,7 +1641,8 @@ public class Parser extends AbstractParser {
 
             PropertyNode constructor = null;
             ArrayList<PropertyNode> classElements = new ArrayList<>();
-            Map<String, Integer> privateNameToAccessorIndexMap = new HashMap<>();
+            //Map<String, Integer> privateNameToAccessorIndexMap = new HashMap<>();
+            Map<String, Integer> elementNameToIndexMap = new HashMap<>();
             int instanceFieldCount = 0;
             int staticFieldCount = 0;
             boolean hasPrivateMethods = false;
@@ -1654,7 +1655,7 @@ public class Parser extends AbstractParser {
                 if (type == RBRACE) {
                     break;
                 }
-                List<Expression> propertyDecorators = new ArrayList<>();
+                List<Expression> propertyDecorators = null;
                 final long decoratorToken = token;
                 if (type == AT) {
                     propertyDecorators = decoratorList(yield, await);
@@ -1696,7 +1697,39 @@ public class Parser extends AbstractParser {
                 } else {
                     classElement = methodDefinition(classElementName, isStatic, classHeritage != null, generator, async, classElementToken, classElementLine, yield, await, nameTokenType, computed, propertyDecorators);
 
-                    if (!classElement.isComputed() && classElement.isAccessor()) {
+                    //CoalesceClassElements
+                    if (!classElements.isEmpty()) {
+                        Integer existingIndex = elementNameToIndexMap.get(classElement.getKeyName());
+                        if (existingIndex == null) {
+                            elementNameToIndexMap.put(classElement.getKeyName(), classElements.size());
+                        } else {
+                            PropertyNode existing = classElements.get(existingIndex);
+                            if (existing.isAccessor() == classElement.isAccessor() && existing.isProto() == classElement.isProto() && existing.isStatic() == classElement.isStatic()) {
+                                if (existing.isAccessor()) {
+                                    if (existing.getDecorators() != null && classElement.getDecorators() != null) {
+                                        //throw error;
+                                    }
+                                    existing = existing.setDecorators(classElement.getDecorators());
+                                    //CoalesceGetterSetter
+                                    if (classElement.getGetter() != null) {
+                                        existing = existing.setGetter(classElement.getGetter());
+                                    } else {
+                                        assert classElement.getSetter() != null;
+                                        existing = existing.setSetter(classElement.getSetter());
+                                    }
+                                } else {
+                                    if (existing.getDecorators() != null || classElement.getDecorators() != null) {
+                                        //throw error;
+                                    }
+                                    existing = classElement;
+                                }
+                                classElements.set(existingIndex, existing);
+                                continue;
+                            }
+                        }
+                    }
+
+                    /*if (!classElement.isComputed() && classElement.isAccessor()) {
                         if (classElement.isPrivate()) {
                             // merge private accessor methods
                             String privateName = classElement.getPrivateName();
@@ -1727,7 +1760,7 @@ public class Parser extends AbstractParser {
                                 continue;
                             }
                         }
-                    }
+                    }*/
                 }
 
                 if (classElement.isPrivate()) {
@@ -1738,7 +1771,7 @@ public class Parser extends AbstractParser {
 
                 if (!classElement.isStatic() && !classElement.isComputed() && classElement.getKeyName().equals(CONSTRUCTOR_NAME)) {
                     assert !classElement.isClassField();
-                    if(propertyDecorators != null) {
+                    if (propertyDecorators != null) {
                         throw error(AbstractParser.message("constructor.decorators"), decoratorToken);
                     }
                     if (constructor == null) {
