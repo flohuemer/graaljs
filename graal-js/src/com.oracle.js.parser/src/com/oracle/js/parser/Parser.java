@@ -1529,7 +1529,7 @@ public class Parser extends AbstractParser {
      * @return Class expression node.
      */
     private ClassNode classDeclaration(boolean yield, boolean await, boolean defaultExport) {
-        List<Expression> classDecorators = null;
+        List<Expression> classDecorators = new ArrayList<>();
         if (type == AT) {
             classDecorators = decoratorList(yield, await);
         }
@@ -1571,7 +1571,7 @@ public class Parser extends AbstractParser {
      * @return Class expression node.
      */
     private ClassNode classExpression(boolean yield, boolean await) {
-        List<Expression> classDecorators = null;
+        List<Expression> classDecorators = new ArrayList<>();
         if (type == AT) {
             classDecorators = decoratorList(yield, await);
         }
