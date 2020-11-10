@@ -1662,13 +1662,13 @@ public class Parser extends AbstractParser {
                     propertyDecorators = decoratorList(yield, await);
                 }
 
-                int placements = PropertyNode.PLACEMENT_OWN | PropertyNode.PLACEMENT_PROTOTYPE;
+                int placement = PropertyNode.PLACEMENT_OWN | PropertyNode.PLACEMENT_PROTOTYPE;
                 //boolean isStatic = false;
                 if (type == STATIC) {
                     TokenType nextToken = lookahead();
                     if (nextToken != LPAREN && nextToken != ASSIGN && nextToken != SEMICOLON && nextToken != RBRACE) {
                         //isStatic = true;
-                        placements = PropertyNode.PLACEMENT_STATIC;
+                        placement = PropertyNode.PLACEMENT_STATIC;
                         next();
                     } // else method/field named 'static'
                 }
@@ -1691,16 +1691,16 @@ public class Parser extends AbstractParser {
 
                 PropertyNode classElement;
                 if (!generator && !async && isClassFieldDefinition(nameTokenType)) {
-                    placements = placements & (PropertyNode.PLACEMENT_OWN | PropertyNode.PLACEMENT_STATIC);
-                    classElement = fieldDefinition(classElementName, classElementToken, computed, propertyDecorators, placements);
-                    if ((placements & PropertyNode.PLACEMENT_STATIC) != 0) {
+                    placement = placement & (PropertyNode.PLACEMENT_OWN | PropertyNode.PLACEMENT_STATIC);
+                    classElement = fieldDefinition(classElementName, classElementToken, computed, propertyDecorators, placement);
+                    if ((placement & PropertyNode.PLACEMENT_STATIC) != 0) {
                         staticFieldCount++;
                     } else {
                         instanceFieldCount++;
                     }
                 } else {
-                    placements = placements & (PropertyNode.PLACEMENT_PROTOTYPE | PropertyNode.PLACEMENT_STATIC);
-                    classElement = methodDefinition(classElementName, classHeritage != null, generator, async, classElementToken, classElementLine, yield, await, nameTokenType, computed, propertyDecorators, placements);
+                    placement = placement & (PropertyNode.PLACEMENT_PROTOTYPE | PropertyNode.PLACEMENT_STATIC);
+                    classElement = methodDefinition(classElementName, classHeritage != null, generator, async, classElementToken, classElementLine, yield, await, nameTokenType, computed, propertyDecorators, placement);
 
                     //CoalesceClassElements
                     Integer existingIndex = elementNameToIndexMap.get(classElement.getKeyName());
@@ -1708,11 +1708,11 @@ public class Parser extends AbstractParser {
                         elementNameToIndexMap.put(classElement.getKeyName(), classElements.size());
                     } else {
                         PropertyNode existing = classElements.get(existingIndex);
-                        if (existing.isAccessor() == classElement.isAccessor() && existing.getPlacements() == classElement.getPlacements()) {
+                        if (existing.isAccessor() == classElement.isAccessor() && existing.getPlacement() == classElement.getPlacement()) {
                             if (existing.isAccessor()) {
                                 if(classElement.getDecorators() != null) {
                                     if (existing.getDecorators() != null) {
-                                        //throw error;
+                                        throw error(ECMAErrors.getMessage("type.error.accessor.with.multiple.decorators"),decoratorToken);
                                     }
                                     existing = existing.setDecorators(classElement.getDecorators());
                                 }
@@ -1725,7 +1725,7 @@ public class Parser extends AbstractParser {
                                 }
                             } else {
                                 if (existing.getDecorators() != null || classElement.getDecorators() != null) {
-                                    //throw error;
+                                    throw error(ECMAErrors.getMessage("type.error.duplicate.method.with.decorators"),decoratorToken);
                                 }
                                 existing = classElement;
                             }
@@ -1769,11 +1769,11 @@ public class Parser extends AbstractParser {
 
                 if (classElement.isPrivate()) {
                     hasPrivateMethods = hasPrivateMethods || !classElement.isClassField();
-                    hasPrivateInstanceMethods = hasPrivateInstanceMethods || (!classElement.isClassField() && !classElement.hasStaticPlacement());
+                    hasPrivateInstanceMethods = hasPrivateInstanceMethods || (!classElement.isClassField() && !classElement.isStatic());
                     declarePrivateName(classScope, classElement);
                 }
 
-                if (!classElement.hasStaticPlacement() && !classElement.isComputed() && classElement.getKeyName().equals(CONSTRUCTOR_NAME)) {
+                if (!classElement.isStatic() && !classElement.isComputed() && classElement.getKeyName().equals(CONSTRUCTOR_NAME)) {
                     assert !classElement.isClassField();
                     if (propertyDecorators != null) {
                         throw error(AbstractParser.message("constructor.decorators"), decoratorToken);
@@ -1860,7 +1860,7 @@ public class Parser extends AbstractParser {
     private void declarePrivateName(Scope classScope, PropertyNode classElement) {
         // Syntax Error if PrivateBoundIdentifiers of ClassBody contains any duplicate entries,
         // unless the name is used once for a getter and once for a setter and in no other entries.
-        int privateFlags = (classElement.hasStaticPlacement() ? Symbol.IS_PRIVATE_NAME_STATIC : 0);
+        int privateFlags = (classElement.isStatic() ? Symbol.IS_PRIVATE_NAME_STATIC : 0);
         if (!classElement.isClassField()) {
             privateFlags |= classElement.isAccessor() ? Symbol.IS_PRIVATE_NAME_ACCESSOR : Symbol.IS_PRIVATE_NAME_METHOD;
         }
@@ -1957,25 +1957,25 @@ public class Parser extends AbstractParser {
     }
 
     private PropertyNode methodDefinition(Expression propertyName, boolean derived, boolean generator, boolean async, long startToken, int methodLine, boolean yield,
-                                          boolean await, TokenType nameTokenType, boolean computed, List<Expression> decorators, int placements) {
+                                          boolean await, TokenType nameTokenType, boolean computed, List<Expression> decorators, int placement) {
         int flags = FunctionNode.IS_METHOD;
-        boolean isStatic = (placements & PropertyNode.PLACEMENT_STATIC) != 0;
+        boolean isStatic = (placement & PropertyNode.PLACEMENT_STATIC) != 0;
         if (!computed) {
             final String name = ((PropertyKey) propertyName).getPropertyName();
             if (!generator && nameTokenType == GET && type != LPAREN) {
-                if(type == PRIVATE_IDENT && placements == PropertyNode.PLACEMENT_PROTOTYPE) {
-                    placements = PropertyNode.PLACEMENT_OWN;
+                if(type == PRIVATE_IDENT && placement == PropertyNode.PLACEMENT_PROTOTYPE) {
+                    placement = PropertyNode.PLACEMENT_OWN;
                 }
                 PropertyFunction methodDefinition = propertyGetterFunction(startToken, methodLine, yield, await, true);
                 verifyAllowedMethodName(methodDefinition.key, isStatic , methodDefinition.computed, generator, true, async);
-                return new PropertyNode(startToken, finish, methodDefinition.key, null, methodDefinition.functionNode, null, methodDefinition.computed, false, false, decorators, placements);
+                return new PropertyNode(startToken, finish, methodDefinition.key, null, methodDefinition.functionNode, null, methodDefinition.computed, false, false, decorators, placement);
             } else if (!generator && nameTokenType == SET && type != LPAREN) {
-                if(type == PRIVATE_IDENT && placements == PropertyNode.PLACEMENT_PROTOTYPE) {
-                    placements = PropertyNode.PLACEMENT_OWN;
+                if(type == PRIVATE_IDENT && placement == PropertyNode.PLACEMENT_PROTOTYPE) {
+                    placement = PropertyNode.PLACEMENT_OWN;
                 }
                 PropertyFunction methodDefinition = propertySetterFunction(startToken, methodLine, yield, await, true);
                 verifyAllowedMethodName(methodDefinition.key, isStatic, methodDefinition.computed, generator, true, async);
-                return new PropertyNode(startToken, finish, methodDefinition.key, null, null, methodDefinition.functionNode, methodDefinition.computed, false, false, decorators, placements);
+                return new PropertyNode(startToken, finish, methodDefinition.key, null, null, methodDefinition.functionNode, methodDefinition.computed, false, false, decorators, placement);
             } else {
                 if (!isStatic && !generator && name.equals(CONSTRUCTOR_NAME)) {
                     flags |= FunctionNode.IS_CLASS_CONSTRUCTOR;
@@ -1983,14 +1983,15 @@ public class Parser extends AbstractParser {
                         flags |= FunctionNode.IS_DERIVED_CONSTRUCTOR;
                     }
                 }
-                if(nameTokenType == PRIVATE_IDENT && placements == PropertyNode.PLACEMENT_PROTOTYPE) {
-                    placements = PropertyNode.PLACEMENT_OWN;
+                //DefaultMethodDescriptor
+                if(nameTokenType == PRIVATE_IDENT && placement == PropertyNode.PLACEMENT_PROTOTYPE) {
+                    placement = PropertyNode.PLACEMENT_OWN;
                 }
                 verifyAllowedMethodName(propertyName, isStatic, computed, generator, false, async);
             }
         }
         PropertyFunction methodDefinition = propertyMethodFunction(propertyName, startToken, methodLine, generator, flags, computed, async);
-        return new PropertyNode(startToken, finish, methodDefinition.key, methodDefinition.functionNode, null, null, computed, false, false, decorators, placements);
+        return new PropertyNode(startToken, finish, methodDefinition.key, methodDefinition.functionNode, null, null, computed, false, false, decorators, placement);
     }
 
     /**
@@ -2017,14 +2018,14 @@ public class Parser extends AbstractParser {
         }
     }
 
-    private PropertyNode fieldDefinition(Expression propertyName, long startToken, boolean computed, List<Expression> decorators, int placements) {
+    private PropertyNode fieldDefinition(Expression propertyName, long startToken, boolean computed, List<Expression> decorators, int placement) {
         // "constructor" or #constructor is not allowed as an instance field name
         if (!computed && propertyName instanceof PropertyKey) {
             String name = ((PropertyKey) propertyName).getPropertyName();
             if (CONSTRUCTOR_NAME.equals(name) || PRIVATE_CONSTRUCTOR_NAME.equals(name)) {
                 throw error(AbstractParser.message("constructor.field"), startToken);
             }
-            if ((placements & PropertyNode.PLACEMENT_STATIC) != 0 && PROTOTYPE_NAME.equals(name)) {
+            if ((placement & PropertyNode.PLACEMENT_STATIC) != 0 && PROTOTYPE_NAME.equals(name)) {
                 throw error(AbstractParser.message("static.prototype.field"), startToken);
             }
         }
@@ -2041,7 +2042,7 @@ public class Parser extends AbstractParser {
 
             endOfLine(); // semicolon or end of line
         }
-        return new PropertyNode(startToken, finish, propertyName, initializer, null, null, computed, false, false, true, isAnonymousFunctionDefinition, decorators, placements);
+        return new PropertyNode(startToken, finish, propertyName, initializer, null, null, computed, false, false, true, isAnonymousFunctionDefinition, decorators, placement);
     }
 
     private Pair<FunctionNode, Boolean> fieldInitializer(int lineNumber, long fieldToken, Expression propertyName, boolean computed) {

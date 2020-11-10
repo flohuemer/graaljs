@@ -104,7 +104,7 @@ public class ClassNode extends LexicalContextExpression implements LexicalContex
     private static int fieldCount(List<PropertyNode> classElements, boolean isStatic) {
         int count = 0;
         for (PropertyNode classElement : classElements) {
-            if (classElement.isClassField() && classElement.hasStaticPlacement() == isStatic) {
+            if (classElement.isClassField() && classElement.isStatic() == isStatic) {
                 count++;
             }
         }

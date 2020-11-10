@@ -84,7 +84,7 @@ public final class PropertyNode extends Node {
 
     private final List<Expression> decorators;
 
-    private final int placements;
+    private final int placement;
 
     public static final int PLACEMENT_EMPTY = 1 << 0;
 
@@ -94,16 +94,16 @@ public final class PropertyNode extends Node {
 
     public static final int PLACEMENT_PROTOTYPE = 1 << 3;
 
-    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators, int placements) {
-        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, false, false, decorators, placements);
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators, int placement) {
+        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, false, false, decorators, placement);
     }
 
-    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, int placements) {
-        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, false, false, null, placements);
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, int placement) {
+        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, false, false, null, placement);
     }
 
-    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition, int placements) {
-        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, classField, isAnonymousFunctionDefinition, null, placements);
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition, int placement) {
+        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, classField, isAnonymousFunctionDefinition, null, placement);
     }
 
     /**
@@ -116,7 +116,7 @@ public final class PropertyNode extends Node {
      * @param getter getter function body
      * @param setter setter function body
      */
-    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition, List<Expression> decorators, int placements) {
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition, List<Expression> decorators, int placement) {
         super(token, finish);
         this.key = key;
         this.value = value;
@@ -128,10 +128,10 @@ public final class PropertyNode extends Node {
         this.classField = classField;
         this.isAnonymousFunctionDefinition = isAnonymousFunctionDefinition;
         this.decorators = decorators;
-        this.placements = placements;
+        this.placement = placement;
     }
 
-    private PropertyNode(PropertyNode propertyNode, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators, int placements) {
+    private PropertyNode(PropertyNode propertyNode, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators, int placement) {
         super(propertyNode);
         this.key = key;
         this.value = value;
@@ -143,7 +143,7 @@ public final class PropertyNode extends Node {
         this.classField = propertyNode.classField;
         this.isAnonymousFunctionDefinition = propertyNode.isAnonymousFunctionDefinition;
         this.decorators = decorators;
-        this.placements = placements;
+        this.placement = placement;
     }
 
     /**
@@ -178,7 +178,7 @@ public final class PropertyNode extends Node {
     @Override
     public void toString(final StringBuilder sb, final boolean printType) {
         if (value != null) {
-            if (hasStaticPlacement()) {
+            if (isStatic()) {
                 sb.append("static ");
             }
             if (value instanceof FunctionNode && ((FunctionNode) value).isMethod()) {
@@ -192,7 +192,7 @@ public final class PropertyNode extends Node {
         }
 
         if (getter != null) {
-            if (hasStaticPlacement()) {
+            if (isStatic()) {
                 sb.append("static ");
             }
             sb.append("get ");
@@ -201,7 +201,7 @@ public final class PropertyNode extends Node {
         }
 
         if (setter != null) {
-            if (hasStaticPlacement()) {
+            if (isStatic()) {
                 sb.append("static ");
             }
             sb.append("set ");
@@ -239,7 +239,7 @@ public final class PropertyNode extends Node {
         if (this.getter == getter) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placement);
     }
 
     /**
@@ -255,7 +255,7 @@ public final class PropertyNode extends Node {
         if (this.key == key) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placement);
     }
 
     /**
@@ -277,7 +277,7 @@ public final class PropertyNode extends Node {
         if (this.setter == setter) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placement);
     }
 
     /**
@@ -299,7 +299,7 @@ public final class PropertyNode extends Node {
         if (this.value == value) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placement);
     }
 
     /**
@@ -321,24 +321,14 @@ public final class PropertyNode extends Node {
         if (this.decorators == decorators) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placement);
     }
 
-    public boolean hasStaticPlacement() {
-        return (placements & PLACEMENT_STATIC) != 0;
+    public boolean isStatic() {
+        return (placement & PLACEMENT_STATIC) != 0;
     }
 
-    public boolean hasOwnPlacement() {
-        return (placements & PLACEMENT_OWN) != 0;
-    }
-
-    public boolean hasPrototypePlacement() {
-        return (placements & PLACEMENT_PROTOTYPE) != 0;
-    }
-
-    public int getPlacements() {
-        return  placements;
-    }
+    public int getPlacement() { return placement; }
 
     public boolean isComputed() {
         return computed;

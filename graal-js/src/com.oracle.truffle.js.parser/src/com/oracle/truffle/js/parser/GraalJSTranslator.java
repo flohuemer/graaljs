@@ -2832,7 +2832,7 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
             } else if (property.isRest()) {
                 assert !isClass;
                 JavaScriptNode from = transform(((UnaryNode) property.getKey()).getExpression());
-                member = factory.createSpreadObjectMember(property.hasStaticPlacement(), from);
+                member = factory.createSpreadObjectMember(property.isStatic(), from);
             } else {
                 member = enterObjectAccessorNode(property, isClass);
             }
@@ -2847,13 +2847,13 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
         JavaScriptNode setter = getAccessor(property.getSetter());
         boolean enumerable = !isClass;
         if (property.isComputed()) {
-            return factory.createComputedAccessorMember(transform(property.getKey()), property.hasStaticPlacement(), enumerable, getter, setter);
+            return factory.createComputedAccessorMember(transform(property.getKey()), property.isStatic(), enumerable, getter, setter);
         } else if (property.isPrivate()) {
             VarRef privateVar = environment.findLocalVar(property.getPrivateName());
             JSWriteFrameSlotNode writePrivateNode = (JSWriteFrameSlotNode) privateVar.createWriteNode(null);
-            return factory.createPrivateAccessorMember(property.hasStaticPlacement(), getter, setter, writePrivateNode);
+            return factory.createPrivateAccessorMember(property.isStatic(), getter, setter, writePrivateNode);
         } else {
-            return factory.createAccessorMember(property.getKeyName(), property.hasStaticPlacement(), enumerable, getter, setter);
+            return factory.createAccessorMember(property.getKeyName(), property.isStatic(), enumerable, getter, setter);
         }
     }
 
@@ -2897,20 +2897,20 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
         boolean enumerable = !isClass || property.isClassField();
         if (property.isComputed()) {
             JavaScriptNode computedKey = transform(property.getKey());
-            return factory.createComputedDataMember(computedKey, property.hasStaticPlacement(), enumerable, value, property.isClassField(), property.isAnonymousFunctionDefinition());
+            return factory.createComputedDataMember(computedKey, property.isStatic(), enumerable, value, property.isClassField(), property.isAnonymousFunctionDefinition());
         } else if (!isClass && property.isProto()) {
-            return factory.createProtoMember(property.getKeyName(), property.hasStaticPlacement(), value);
+            return factory.createProtoMember(property.getKeyName(), property.isStatic(), value);
         } else if (property.isPrivate()) {
             VarRef privateVar = environment.findLocalVar(property.getPrivateName());
             if (property.isClassField()) {
                 JSWriteFrameSlotNode writePrivateNode = (JSWriteFrameSlotNode) privateVar.createWriteNode(factory.createNewPrivateName(property.getPrivateName()));
-                return factory.createPrivateFieldMember(privateVar.createReadNode(), property.hasStaticPlacement(), value, writePrivateNode);
+                return factory.createPrivateFieldMember(privateVar.createReadNode(), property.isStatic(), value, writePrivateNode);
             } else {
                 JSWriteFrameSlotNode writePrivateNode = (JSWriteFrameSlotNode) privateVar.createWriteNode(null);
-                return factory.createPrivateMethodMember(property.hasStaticPlacement(), value, writePrivateNode);
+                return factory.createPrivateMethodMember(property.isStatic(), value, writePrivateNode);
             }
         } else {
-            return factory.createDataMember(property.getKeyName(), property.hasStaticPlacement(), enumerable, value, property.isClassField());
+            return factory.createDataMember(property.getKeyName(), property.isStatic(), enumerable, value, property.isClassField());
         }
     }
 
