@@ -52,19 +52,25 @@ import java.util.List;
  */
 public final class PropertyNode extends Node {
 
-    /** Property key. */
+    /**
+     * Property key.
+     */
     private final Expression key;
 
-    /** Property value. */
+    /**
+     * Property value.
+     */
     private final Expression value;
 
-    /** Property getter. */
+    /**
+     * Property getter.
+     */
     private final FunctionNode getter;
 
-    /** Property setter. */
+    /**
+     * Property setter.
+     */
     private final FunctionNode setter;
-
-    private final boolean isStatic;
 
     private final boolean computed;
 
@@ -78,61 +84,66 @@ public final class PropertyNode extends Node {
 
     private final List<Expression> decorators;
 
-    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
-                        boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators) {
-        this(token,finish, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, false,false, decorators);
+    private final int placements;
+
+    public static final int PLACEMENT_EMPTY = 1 << 0;
+
+    public static final int PLACEMENT_STATIC = 1 << 1;
+
+    public static final int PLACEMENT_OWN = 1 << 2;
+
+    public static final int PLACEMENT_PROTOTYPE = 1 << 3;
+
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators, int placements) {
+        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, false, false, decorators, placements);
     }
 
-    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
-                    boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto) {
-        this(token, finish, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, false, false, null);
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, int placements) {
+        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, false, false, null, placements);
     }
 
-    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
-                        boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition) {
-        this(token,finish,key,value,getter,setter,isStatic,computed,coverInitializedName,proto,classField,isAnonymousFunctionDefinition,null);
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition, int placements) {
+        this(token, finish, key, value, getter, setter, computed, coverInitializedName, proto, classField, isAnonymousFunctionDefinition, null, placements);
     }
 
     /**
      * Constructor
      *
-     * @param token token
+     * @param token  token
      * @param finish finish
-     * @param key the key of this property
-     * @param value the value of this property
+     * @param key    the key of this property
+     * @param value  the value of this property
      * @param getter getter function body
      * @param setter setter function body
      */
-    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
-                    boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition, List<Expression> decorators) {
+    public PropertyNode(long token, int finish, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, boolean classField, boolean isAnonymousFunctionDefinition, List<Expression> decorators, int placements) {
         super(token, finish);
         this.key = key;
         this.value = value;
         this.getter = getter;
         this.setter = setter;
-        this.isStatic = isStatic;
         this.computed = computed;
         this.coverInitializedName = coverInitializedName;
         this.proto = proto;
         this.classField = classField;
         this.isAnonymousFunctionDefinition = isAnonymousFunctionDefinition;
         this.decorators = decorators;
+        this.placements = placements;
     }
 
-    private PropertyNode(PropertyNode propertyNode, Expression key, Expression value, FunctionNode getter, FunctionNode setter,
-                    boolean isStatic, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators) {
+    private PropertyNode(PropertyNode propertyNode, Expression key, Expression value, FunctionNode getter, FunctionNode setter, boolean computed, boolean coverInitializedName, boolean proto, List<Expression> decorators, int placements) {
         super(propertyNode);
         this.key = key;
         this.value = value;
         this.getter = getter;
         this.setter = setter;
-        this.isStatic = isStatic;
         this.computed = computed;
         this.coverInitializedName = coverInitializedName;
         this.proto = proto;
         this.classField = propertyNode.classField;
         this.isAnonymousFunctionDefinition = propertyNode.isAnonymousFunctionDefinition;
         this.decorators = decorators;
+        this.placements = placements;
     }
 
     /**
@@ -149,10 +160,10 @@ public final class PropertyNode extends Node {
         if (visitor.enterPropertyNode(this)) {
             //@formatter:off
             return visitor.leavePropertyNode(
-                setKey((Expression) key.accept(visitor)).
-                setValue(value == null ? null : (Expression) value.accept(visitor)).
-                setGetter(getter == null ? null : (FunctionNode) getter.accept(visitor)).
-                setSetter(setter == null ? null : (FunctionNode) setter.accept(visitor)));
+                    setKey((Expression) key.accept(visitor)).
+                            setValue(value == null ? null : (Expression) value.accept(visitor)).
+                            setGetter(getter == null ? null : (FunctionNode) getter.accept(visitor)).
+                            setSetter(setter == null ? null : (FunctionNode) setter.accept(visitor)));
             //@formatter:on
         }
 
@@ -167,7 +178,7 @@ public final class PropertyNode extends Node {
     @Override
     public void toString(final StringBuilder sb, final boolean printType) {
         if (value != null) {
-            if (isStatic) {
+            if (hasStaticPlacement()) {
                 sb.append("static ");
             }
             if (value instanceof FunctionNode && ((FunctionNode) value).isMethod()) {
@@ -181,7 +192,7 @@ public final class PropertyNode extends Node {
         }
 
         if (getter != null) {
-            if (isStatic) {
+            if (hasStaticPlacement()) {
                 sb.append("static ");
             }
             sb.append("get ");
@@ -190,7 +201,7 @@ public final class PropertyNode extends Node {
         }
 
         if (setter != null) {
-            if (isStatic) {
+            if (hasStaticPlacement()) {
                 sb.append("static ");
             }
             sb.append("set ");
@@ -228,7 +239,7 @@ public final class PropertyNode extends Node {
         if (this.getter == getter) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
     }
 
     /**
@@ -244,7 +255,7 @@ public final class PropertyNode extends Node {
         if (this.key == key) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
     }
 
     /**
@@ -266,7 +277,7 @@ public final class PropertyNode extends Node {
         if (this.setter == setter) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
     }
 
     /**
@@ -288,14 +299,17 @@ public final class PropertyNode extends Node {
         if (this.value == value) {
             return this;
         }
-        return new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
     }
 
     /**
      * Get the decorators of this property
+     *
      * @return property decorators
      */
-    public List<Expression> getDecorators() { return decorators; }
+    public List<Expression> getDecorators() {
+        return decorators;
+    }
 
     /**
      * Sets the decorators of this property
@@ -304,14 +318,26 @@ public final class PropertyNode extends Node {
      * @return same node or new node if decorators changed
      */
     public PropertyNode setDecorators(final List<Expression> decorators) {
-        if(this.decorators == decorators) {
-            return  this;
+        if (this.decorators == decorators) {
+            return this;
         }
-        return  new PropertyNode(this, key, value, getter, setter, isStatic, computed, coverInitializedName, proto, decorators);
+        return new PropertyNode(this, key, value, getter, setter, computed, coverInitializedName, proto, decorators, placements);
     }
 
-    public boolean isStatic() {
-        return isStatic;
+    public boolean hasStaticPlacement() {
+        return (placements & PLACEMENT_STATIC) != 0;
+    }
+
+    public boolean hasOwnPlacement() {
+        return (placements & PLACEMENT_OWN) != 0;
+    }
+
+    public boolean hasPrototypePlacement() {
+        return (placements & PLACEMENT_PROTOTYPE) != 0;
+    }
+
+    public int getPlacements() {
+        return  placements;
     }
 
     public boolean isComputed() {
