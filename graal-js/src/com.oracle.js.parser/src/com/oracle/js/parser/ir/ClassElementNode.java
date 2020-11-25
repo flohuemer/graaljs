@@ -192,6 +192,8 @@ public class ClassElementNode extends Node {
         return isPrivate;
     }
 
+    public boolean isEnumerable() { return (enumerable & STATE_TRUE) != 0; }
+
     public String getPrivateName() {
         assert isPrivate();
         return ((IdentNode) key).getName();
@@ -223,11 +225,25 @@ public class ClassElementNode extends Node {
         return new ClassElementNode(this,kind,key,placement,value,writeable,get,set,enumerable,configurable,initialize,decorators,isPrivate,isComputed);
     }
 
-    public Expression getValue() { return value; }
+    public FunctionNode getValue() { return value; }
 
     public ClassElementNode setValue(FunctionNode value) {
         return  new ClassElementNode(this, kind, key, placement,value, writeable, get,set, enumerable,configurable,initialize,decorators,isPrivate,isComputed);
     }
+
+    public int isWriteable() {
+        return writeable;
+    }
+
+    public int isConfigurable() {
+        return configurable;
+    }
+
+    public int getDescriptorInfo() {
+        return writeable << 6 + enumerable << 3 + configurable;
+    }
+
+    public FunctionNode getInitialize() { return initialize; }
 
     @Override
     public Node accept(NodeVisitor<? extends LexicalContext> visitor) {
