@@ -26,7 +26,7 @@ public class ClassElementNode extends Node {
     /**
      * PropertyDescriptor fields
      */
-    private final Expression value;
+    private final FunctionNode value;
     private final int writeable;
     private final FunctionNode get;
     private final FunctionNode set;
@@ -44,6 +44,7 @@ public class ClassElementNode extends Node {
     public static final int PLACEMENT_STATIC = 1 << 0;
     public static final int PLACEMENT_PROTOTYPE = 1 << 1;
     public static final int PLACEMENT_OWN = 1 << 2;
+    public static final int PLACEMENT_NONE = 1 << 3;
 
     /**
      * A function or empty. This field can be absent
@@ -57,9 +58,11 @@ public class ClassElementNode extends Node {
 
     private final boolean isPrivate;
 
-    private ClassElementNode(long token, int finish, int kind, Expression key, int placement, Expression value,
+    private final boolean isComputed;
+
+    private ClassElementNode(long token, int finish, int kind, Expression key, int placement, FunctionNode value,
                              int writeable, FunctionNode get, FunctionNode set, int enumerable, int configurable,
-                             FunctionNode initialize, List<Expression> decorators, boolean isPrivate) {
+                             FunctionNode initialize, List<Expression> decorators, boolean isPrivate, boolean isComputed) {
         super(token, finish);
         this.kind = kind;
         this.key = key;
@@ -73,11 +76,12 @@ public class ClassElementNode extends Node {
         this.initialize = initialize;
         this.decorators = decorators;
         this.isPrivate = isPrivate;
+        this.isComputed = isComputed;
     }
 
-    private ClassElementNode(ClassElementNode classElementNode, int kind, Expression key, int placement, Expression value,
+    private ClassElementNode(ClassElementNode classElementNode, int kind, Expression key, int placement, FunctionNode value,
                              int writeable, FunctionNode get, FunctionNode set, int enumerable, int configurable,
-                             FunctionNode initialize, List<Expression> decorators, boolean isPrivate) {
+                             FunctionNode initialize, List<Expression> decorators, boolean isPrivate, boolean isComputed) {
         super(classElementNode);
         this.kind = kind;
         this.key = key;
@@ -91,52 +95,53 @@ public class ClassElementNode extends Node {
         this.initialize = initialize;
         this.decorators = decorators;
         this.isPrivate = isPrivate;
+        this.isComputed = isComputed;
     }
 
-    public static ClassElementNode createMethod(long token, int finish, Expression key, int placement, Expression value, List<Expression> decorators, boolean isPrivate) {
+    public static ClassElementNode createMethod(long token, int finish, Expression key, int placement, FunctionNode value, List<Expression> decorators, boolean isPrivate, boolean isComputed) {
         if (isPrivate) {
             if ((placement & PLACEMENT_PROTOTYPE) != 0) {
                 placement = PLACEMENT_OWN;
             }
             return new ClassElementNode(token, finish, KIND_METHOD, key, placement, value, STATE_FALSE, null, null, STATE_FALSE,
-                    STATE_FALSE, null, decorators, isPrivate);
+                    STATE_FALSE, null, decorators, true, isComputed);
         } else {
             return new ClassElementNode(token, finish, KIND_METHOD, key, placement, value, STATE_TRUE, null, null, STATE_ABSENT,
-                    STATE_TRUE, null, decorators, isPrivate);
+                    STATE_TRUE, null, decorators, false, isComputed);
         }
     }
 
-    public static ClassElementNode createGetter(long token, int finish, Expression key, int placement, FunctionNode get, List<Expression> decorators, boolean isPrivate){
+    public static ClassElementNode createGetter(long token, int finish, Expression key, int placement, FunctionNode get, List<Expression> decorators, boolean isPrivate, boolean isComputed){
         if(isPrivate) {
             if ((placement & PLACEMENT_PROTOTYPE) != 0) {
                 placement = PLACEMENT_OWN;
             }
             return  new ClassElementNode(token, finish, KIND_ACCESSOR, key, placement, null, STATE_ABSENT, get, null, STATE_FALSE,
-                    STATE_FALSE,null, decorators, isPrivate);
+                    STATE_FALSE,null, decorators, true, isComputed);
         } else {
             return new ClassElementNode(token, finish, KIND_ACCESSOR, key, placement, null, STATE_ABSENT, get, null, STATE_ABSENT,
-                    STATE_TRUE, null, decorators, isPrivate);
+                    STATE_TRUE, null, decorators, false, isComputed);
         }
     }
 
-    public static ClassElementNode createSetter(long token, int finish, Expression key, int placement, FunctionNode set, List<Expression> decorators, boolean isPrivate) {
+    public static ClassElementNode createSetter(long token, int finish, Expression key, int placement, FunctionNode set, List<Expression> decorators, boolean isPrivate, boolean isComputed) {
         if(isPrivate) {
             if ((placement & PLACEMENT_PROTOTYPE) != 0) {
                 placement = PLACEMENT_OWN;
             }
             return  new ClassElementNode(token, finish, KIND_ACCESSOR, key, placement, null, STATE_ABSENT, null, set, STATE_FALSE,
-                    STATE_FALSE,null, decorators, isPrivate);
+                    STATE_FALSE,null, decorators, true, isComputed);
         } else {
             return new ClassElementNode(token, finish, KIND_ACCESSOR, key, placement, null, STATE_ABSENT, null, set, STATE_ABSENT,
-                    STATE_TRUE, null, decorators, isPrivate);
+                    STATE_TRUE, null, decorators, false, isComputed);
         }
     }
 
-    public static ClassElementNode createField(long token, int finish, Expression key, int placement, FunctionNode initialize, List<Expression> decorators, boolean isPrivate) {
+    public static ClassElementNode createField(long token, int finish, Expression key, int placement, FunctionNode initialize, List<Expression> decorators, boolean isPrivate, boolean isComputed) {
         if(isPrivate) {
-            return new ClassElementNode(token, finish, KIND_FIELD, key, placement, null, STATE_FALSE, null, null, STATE_FALSE, STATE_FALSE,initialize, decorators, isPrivate);
+            return new ClassElementNode(token, finish, KIND_FIELD, key, placement, null, STATE_FALSE, null, null, STATE_FALSE, STATE_FALSE,initialize, decorators, true, isComputed);
         } else {
-            return new ClassElementNode(token, finish, KIND_FIELD, key, placement, null, STATE_TRUE, null, null, STATE_TRUE, STATE_TRUE,initialize, decorators, isPrivate);
+            return new ClassElementNode(token, finish, KIND_FIELD, key, placement, null, STATE_TRUE, null, null, STATE_TRUE, STATE_TRUE,initialize, decorators, false, isComputed);
         }
     }
 
@@ -160,6 +165,8 @@ public class ClassElementNode extends Node {
     public String getKeyName() {
         return key instanceof PropertyKey ? ((PropertyKey) key).getPropertyName() : null;
     }
+
+    public Expression getKey() { return key; }
 
     public int getKind() {
         return kind;
@@ -185,12 +192,19 @@ public class ClassElementNode extends Node {
         return isPrivate;
     }
 
+    public String getPrivateName() {
+        assert isPrivate();
+        return ((IdentNode) key).getName();
+    }
+
+    public boolean isComputed() { return isComputed; }
+
     public List<Expression> getDecorators() {
         return decorators;
     }
 
     public ClassElementNode setDecorators(List<Expression> decorators) {
-        return new ClassElementNode(this,kind,key,placement,value,writeable,get,set,enumerable,configurable,initialize,decorators,isPrivate);
+        return new ClassElementNode(this,kind,key,placement,value,writeable,get,set,enumerable,configurable,initialize,decorators,isPrivate,isComputed);
     }
 
     public FunctionNode getGetter(){
@@ -198,7 +212,7 @@ public class ClassElementNode extends Node {
     }
 
     public ClassElementNode setGetter(FunctionNode get) {
-        return new ClassElementNode(this,kind,key,placement,value,writeable,get,set,enumerable,configurable,initialize,decorators,isPrivate);
+        return new ClassElementNode(this,kind,key,placement,value,writeable,get,set,enumerable,configurable,initialize,decorators,isPrivate,isComputed);
     }
 
     public FunctionNode getSetter() {
@@ -206,7 +220,13 @@ public class ClassElementNode extends Node {
     }
 
     public ClassElementNode setSetter(FunctionNode set) {
-        return new ClassElementNode(this,kind,key,placement,value,writeable,get,set,enumerable,configurable,initialize,decorators,isPrivate);
+        return new ClassElementNode(this,kind,key,placement,value,writeable,get,set,enumerable,configurable,initialize,decorators,isPrivate,isComputed);
+    }
+
+    public Expression getValue() { return value; }
+
+    public ClassElementNode setValue(FunctionNode value) {
+        return  new ClassElementNode(this, kind, key, placement,value, writeable, get,set, enumerable,configurable,initialize,decorators,isPrivate,isComputed);
     }
 
     @Override
@@ -221,6 +241,39 @@ public class ClassElementNode extends Node {
 
     @Override
     public void toString(StringBuilder sb, boolean printType) {
+        if(isStatic()) {
+            sb.append("static ");
+        }
 
+        if (isField()) {
+            toStringKey(sb, printType);
+            initialize.toString(sb, printType);
+        }
+        if(isMethod()) {
+            toStringKey(sb, printType);
+            value.toStringTail(sb, printType);
+        }
+        if(isAccessor()) {
+            if (get != null) {
+                sb.append("get ");
+                toStringKey(sb, printType);
+                get.toStringTail(sb, printType);
+            }
+            if (set != null) {
+                sb.append("set ");
+                toStringKey(sb, printType);
+                set.toStringTail(sb, printType);
+            }
+        }
+    }
+
+    private void toStringKey(final StringBuilder sb, final boolean printType) {
+        if (isComputed) {
+            sb.append('[');
+        }
+        key.toString(sb, printType);
+        if (isComputed) {
+            sb.append(']');
+        }
     }
 }
