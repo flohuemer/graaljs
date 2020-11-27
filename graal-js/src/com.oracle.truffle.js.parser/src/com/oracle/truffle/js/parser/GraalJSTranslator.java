@@ -100,6 +100,9 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.NodeUtil;
+import com.oracle.truffle.api.object.DynamicObject;
+import com.oracle.truffle.api.object.DynamicObjectFactory;
+import com.oracle.truffle.api.object.DynamicObjectLibrary;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.js.lang.JavaScriptLanguage;
@@ -131,7 +134,7 @@ import com.oracle.truffle.js.nodes.access.WritePropertyNode;
 import com.oracle.truffle.js.nodes.binary.DualNode;
 import com.oracle.truffle.js.nodes.binary.JSBinaryNode;
 import com.oracle.truffle.js.nodes.binary.JSTypeofIdenticalNode;
-import com.oracle.truffle.js.nodes.classes.DecoratorNode;
+import com.oracle.truffle.js.nodes.decorators.ClassMemberNode;
 import com.oracle.truffle.js.nodes.control.AbstractBlockNode;
 import com.oracle.truffle.js.nodes.control.BreakNode;
 import com.oracle.truffle.js.nodes.control.BreakTarget;
@@ -180,8 +183,8 @@ import com.oracle.truffle.js.runtime.builtins.JSFunctionData;
 import com.oracle.truffle.js.runtime.objects.Dead;
 import com.oracle.truffle.js.runtime.objects.Undefined;
 import com.oracle.truffle.js.runtime.util.Pair;
-import com.oracle.truffle.js.nodes.classes.ClassNode.ClassMemberBaseNode;
-import sun.jvm.hotspot.debugger.cdbg.Sym;
+import com.oracle.truffle.object.DynamicObjectImpl;
+import com.oracle.truffle.object.ShapeImpl;
 
 abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.TranslatorNodeVisitor<LexicalContext, JavaScriptNode> {
     public static final JavaScriptNode[] EMPTY_NODE_ARRAY = new JavaScriptNode[0];
@@ -3273,12 +3276,12 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
 
             //ArrayList<ObjectLiteralMemberNode> members = transformPropertyDefinitionList(classNode.getClassElements(), true, classNameSymbol);
 
-            ArrayList<ClassMemberBaseNode> members = transformClassElementList(classNode.getClassElements(), classNameSymbol);
+            ArrayList<ClassMemberNode> members = transformClassElementList(classNode.getClassElements(), classNameSymbol);
 
             JSWriteFrameSlotNode writeClassBinding = className == null ? null : (JSWriteFrameSlotNode) findScopeVar(className, true).createWriteNode(null);
 
             JavaScriptNode classDefinition = factory.createClassDefinition(context, (JSFunctionExpressionNode) classFunction, classHeritage,
-                            members.toArray(ObjectLiteralMemberNode.EMPTY), writeClassBinding, className,
+                            members.toArray(ClassMemberNode.EMPTY), writeClassBinding, className,
                             classNode.getInstanceFieldCount(), classNode.getStaticFieldCount(), classNode.hasPrivateInstanceMethods());
 
             if (classNode.hasPrivateMethods()) {
@@ -3290,12 +3293,12 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
         }
     }
 
-    private ArrayList<ClassMemberBaseNode> transformClassElementList(List<ClassElementNode> classElementDefinitions, Symbol classNameSymbol) {
-        ArrayList<ClassMemberBaseNode> classElements = new ArrayList<>(classElementDefinitions.size());
+    private ArrayList<ClassMemberNode> transformClassElementList(List<ClassElementNode> classElementDefinitions, Symbol classNameSymbol) {
+        ArrayList<ClassMemberNode> classElements = new ArrayList<>(classElementDefinitions.size());
         for (int i = 0; i < classElementDefinitions.size(); i++) {
             ClassElementNode classElementDefinition = classElementDefinitions.get(i);
 
-            ClassMemberBaseNode classElement;
+            ObjectLiteralMemberNode classElement;
             if(classElementDefinition.isMethod()) {
                 classElement = enterMethodClassElementNode(classElementDefinition, classNameSymbol);
             } else if (classElementDefinition.isField()) {
@@ -3305,21 +3308,39 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
                 classElement = enterAccessorClassElementNode(classElementDefinition);
             }
             List<Expression> decoratorDefinitions = classElementDefinition.getDecorators();
-            DecoratorNode[] decorators = null;
+            JavaScriptNode[] decorators = null;
+            ObjectLiteralNode memberInfo = null;
             if(decoratorDefinitions != null && decoratorDefinitions.size() != 0) {
-                decorators = new DecoratorNode[decoratorDefinitions.size()];
-                for (int j = 0; i < decoratorDefinitions.size(); j++) {
+                memberInfo = transformMemberDescription(classElementDefinition);
+                decorators = new JavaScriptNode[decoratorDefinitions.size()];
+                for (int j = 0; j < decoratorDefinitions.size(); j++) {
                     JavaScriptNode decoratorExpression = transform(decoratorDefinitions.get(j));
-                    decorators[j] = factory.createDecorator(decoratorExpression);
+                    decorators[j] = decoratorExpression;
                 }
-                classElement = factory.crateClassMemberDecoration(classElement, decorators);
             }
-            classElements.add(classElement);
+            classElements.add(factory.createClassMember(classElement, decorators, memberInfo));
         }
         return  classElements;
     }
 
-    private ClassMemberBaseNode enterMethodClassElementNode(ClassElementNode classElement, Symbol classNameSymbol) {
+    private ObjectLiteralNode transformMemberDescription(ClassElementNode member) {
+        ArrayList<ObjectLiteralMemberNode> objLiterals = new ArrayList<>();
+        String kindString;
+        if(member.isField()) {
+            kindString = "field";
+        } else if(member.isMethod()) {
+            kindString = "method";
+        } else {
+            assert (member.isAccessor());
+            kindString = "accessor";
+        }
+
+        JavaScriptNode kindValue = factory.createConstantString(kindString);
+        objLiterals.add(factory.createDataMember("kind",false,false,kindValue,false));
+        return (ObjectLiteralNode) factory.createObjectLiteral(context, objLiterals);
+    }
+
+    private ObjectLiteralMemberNode enterMethodClassElementNode(ClassElementNode classElement, Symbol classNameSymbol) {
         if(classNameSymbol != null) {
             classNameSymbol.setHasBeenDeclared(true);
         }
@@ -3334,17 +3355,16 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
         if(classElement.isComputed()) {
             JavaScriptNode computedKey = transform(classElement.getKey());
             //Adjust
-            return factory.createComputedClassMethod(computedKey, value, classElement.getPlacement(), classElement.getDescriptorInfo());
+            return factory.createComputedDataMember(computedKey, classElement.isStatic(),classElement.isEnumerable(),value,classElement.isField(),false);
         }
         if(classElement.isPrivate()) {
             VarRef privateVar = environment.findLocalVar(classElement.getPrivateName());
             JSWriteFrameSlotNode writePrivateNode = (JSWriteFrameSlotNode) privateVar.createWriteNode(null);
-            return factory.createPrivateClassMethod(writePrivateNode, value, classElement.getPlacement(), classElement.getDescriptorInfo());
+            return factory.createPrivateMethodMember(classElement.isStatic(),value,writePrivateNode);
         }
-        return factory.createClassMethod(classElement.getKeyName(), value, classElement.getPlacement(), classElement.getDescriptorInfo());
-    }
+        return factory.createDataMember(classElement.getKeyName(),classElement.isStatic(),classElement.isEnumerable(),value,classElement.isField()); }
 
-    private ClassMemberBaseNode enterFieldClassElementNode(ClassElementNode classElement, Symbol classNameSymbol) {
+    private ObjectLiteralMemberNode enterFieldClassElementNode(ClassElementNode classElement, Symbol classNameSymbol) {
         JavaScriptNode value;
         if (classElement.getInitialize() == null) {
             value = factory.createConstantUndefined();
@@ -3359,30 +3379,30 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
         }
         if(classElement.isComputed()) {
             JavaScriptNode computedKey = transform(classElement.getKey());
-            return factory.createComputedClassField(computedKey, value, classElement.getPlacement(), classElement.getDescriptorInfo(), classElement.getDecorators());
+            return factory.createComputedDataMember(computedKey,classElement.isStatic(),classElement.isEnumerable(),value,classElement.isField(),false);
         }
         if(classElement.isPrivate()) {
             VarRef privateVar = environment.findLocalVar(classElement.getPrivateName());
             JSWriteFrameSlotNode writePrivateNode = (JSWriteFrameSlotNode) privateVar.createWriteNode(null);
-            return factory.createPrivateClassField(privateVar.createReadNode(), value, classElement.getPlacement(), classElement.getDescriptorInfo(), classElement.getDecorators());
+            return factory.createPrivateFieldMember(privateVar.createReadNode(),classElement.isStatic(),value,writePrivateNode);
         }
-        return factory.createClassField(classElement.getKeyName(), value, classElement.getPlacement(), classElement.getDescriptorInfo(), classElement.getDecorators());
+        return factory.createDataMember(classElement.getKeyName(),classElement.isStatic(),classElement.isEnumerable(), value, classElement.isField());
     }
 
-    private ClassMemberBaseNode enterAccessorClassElementNode(ClassElementNode classElement) {
+    private ObjectLiteralMemberNode enterAccessorClassElementNode(ClassElementNode classElement) {
         assert classElement.getGetter() != null || classElement.getSetter() != null;
         JavaScriptNode getter = getAccessor(classElement.getGetter());
         JavaScriptNode setter = getAccessor(classElement.getSetter());
         if(classElement.isComputed()) {
             JavaScriptNode computedKey = transform(classElement.getKey());
-            return factory.createComputedClassAccessor(computedKey, getter, setter, classElement.getPlacement(), classElement.getDescriptorInfo(), classElement.getDecorators());
+            return factory.createComputedAccessorMember(computedKey,classElement.isStatic(),classElement.isEnumerable(),getter,setter);
         }
         if(classElement.isPrivate()) {
             VarRef privateVar = environment.findLocalVar(classElement.getPrivateName());
             JSWriteFrameSlotNode writePrivateNode = (JSWriteFrameSlotNode) privateVar.createWriteNode(null);
-            return factory.createPrivateClassAccessor(writePrivateNode, getter, setter, classElement.getPlacement(), classElement.getDescriptorInfo(), classElement.getDecorators());
+            return factory.createPrivateAccessorMember(classElement.isStatic(),getter,setter, writePrivateNode);
         }
-        return factory.createClassAccessor(classElement.getKeyName(), getter, setter, classElement.getPlacement(), classElement.getDescriptorInfo(), classElement.getDecorators());
+        return factory.createAccessorMember(classElement.getKeyName(),classElement.isStatic(),classElement.isEnumerable(),getter, setter);
     }
 
     @Override

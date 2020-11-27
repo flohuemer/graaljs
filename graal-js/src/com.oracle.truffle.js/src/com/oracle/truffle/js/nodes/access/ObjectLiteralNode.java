@@ -209,6 +209,10 @@ public class ObjectLiteralNode extends JavaScriptNode {
             }
             return copy;
         }
+
+        public static ObjectLiteralMemberNode cloneUninitialized(ObjectLiteralMemberNode member, Set<Class<? extends  Tag>> materializedTags) {
+            return member.copyUninitialized(materializedTags);
+        }
     }
 
     private abstract static class CachingObjectLiteralMemberNode extends ObjectLiteralMemberNode {
