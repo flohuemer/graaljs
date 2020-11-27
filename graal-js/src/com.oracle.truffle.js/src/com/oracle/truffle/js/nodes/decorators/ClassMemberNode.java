@@ -1,20 +1,17 @@
 package com.oracle.truffle.js.nodes.decorators;
 
-import com.oracle.js.parser.ir.CallNode;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.object.DynamicObject;
-import com.oracle.truffle.js.builtins.FunctionPrototypeBuiltinsFactory;
 import com.oracle.truffle.js.nodes.JavaScriptBaseNode;
 import com.oracle.truffle.js.nodes.JavaScriptNode;
+import com.oracle.truffle.js.nodes.access.JSTargetableNode;
 import com.oracle.truffle.js.nodes.access.ObjectLiteralNode;
 import com.oracle.truffle.js.nodes.access.ObjectLiteralNode.ObjectLiteralMemberNode;
 import com.oracle.truffle.js.nodes.function.JSFunctionCallNode;
-import com.oracle.truffle.js.nodes.interop.JSInteropCallNode;
-import com.oracle.truffle.js.runtime.AbstractJavaScriptLanguage;
+import com.oracle.truffle.js.runtime.JSArguments;
 import com.oracle.truffle.js.runtime.JSContext;
-import com.oracle.truffle.js.runtime.builtins.JSFunction;
 import com.oracle.truffle.js.runtime.builtins.JSFunctionObject;
 import com.oracle.truffle.js.runtime.objects.JSOrdinaryObject;
 
@@ -41,18 +38,17 @@ public class ClassMemberNode extends JavaScriptBaseNode {
     }
 
     @ExplodeLoop
-    public void executeDecorators(VirtualFrame frame) {
+    public void executeDecorators(VirtualFrame frame, JSContext context) {
         if (decorators == null) {
             return;
         }
-        JavaScriptNode target = null;
-        JavaScriptNode[] arguments = new JavaScriptNode[1];
-        arguments[0] = memberInfo;
-        for (int i = decorators.length - 1; i >= 0; i--) {
-            JavaScriptNode d = decorators[i];
-            JSFunctionCallNode call = JSFunctionCallNode.createCall(d,target,arguments,false,false);
-            JSOrdinaryObject o = (JSOrdinaryObject)call.execute(frame);
-            int j = 0;
+        DecoratorWrapperNode[] arguments = new DecoratorWrapperNode[1];
+        arguments[0] = new DecoratorWrapperNode(memberInfo.execute(frame));
+        for (JavaScriptNode decorator : decorators) {
+            JSFunctionObject n = (JSFunctionObject) decorator.execute(frame);
+            JSOrdinaryObject o = (JSOrdinaryObject) memberInfo.execute(frame);
+            JSFunctionCallNode k = JSFunctionCallNode.createCall();
+            o = (JSOrdinaryObject) k.executeCall(JSArguments.createOneArg(null,n,o));
         }
     }
 

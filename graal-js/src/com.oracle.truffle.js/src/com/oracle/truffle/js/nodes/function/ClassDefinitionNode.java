@@ -200,7 +200,7 @@ public final class ClassDefinitionNode extends JavaScriptNode implements Functio
         int instanceFieldIndex = 0;
         int staticFieldIndex = 0;
         for (ClassMemberNode memberNode : memberNodes) {
-            memberNode.executeDecorators(frame);
+            memberNode.executeDecorators(frame,context);
             DynamicObject homeObject = memberNode.isStatic() ? constructor : proto;
             memberNode.executeVoid(frame, homeObject, context);
             if (memberNode.isField()) {

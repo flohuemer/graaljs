@@ -181,6 +181,7 @@ import com.oracle.truffle.js.runtime.JSFrameUtil;
 import com.oracle.truffle.js.runtime.JSRuntime;
 import com.oracle.truffle.js.runtime.builtins.JSFunctionData;
 import com.oracle.truffle.js.runtime.objects.Dead;
+import com.oracle.truffle.js.runtime.objects.JSOrdinaryObject;
 import com.oracle.truffle.js.runtime.objects.Undefined;
 import com.oracle.truffle.js.runtime.util.Pair;
 import com.oracle.truffle.object.DynamicObjectImpl;
@@ -3312,10 +3313,11 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
             ObjectLiteralNode memberInfo = null;
             if(decoratorDefinitions != null && decoratorDefinitions.size() != 0) {
                 memberInfo = transformMemberDescription(classElementDefinition);
-                decorators = new JavaScriptNode[decoratorDefinitions.size()];
-                for (int j = 0; j < decoratorDefinitions.size(); j++) {
+                int size = decoratorDefinitions.size();
+                decorators = new JavaScriptNode[size];
+                for (int j = size - 1; j >= 0; j--) {
                     JavaScriptNode decoratorExpression = transform(decoratorDefinitions.get(j));
-                    decorators[j] = decoratorExpression;
+                    decorators[size - 1 - j] = decoratorExpression;
                 }
             }
             classElements.add(factory.createClassMember(classElement, decorators, memberInfo));
@@ -3336,7 +3338,7 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
         }
 
         JavaScriptNode kindValue = factory.createConstantString(kindString);
-        objLiterals.add(factory.createDataMember("kind",false,false,kindValue,false));
+        objLiterals.add(factory.createDataMember("kind",false,true,kindValue,false));
         return (ObjectLiteralNode) factory.createObjectLiteral(context, objLiterals);
     }
 
