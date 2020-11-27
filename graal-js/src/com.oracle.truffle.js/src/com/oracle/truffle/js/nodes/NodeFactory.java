@@ -186,6 +186,7 @@ import com.oracle.truffle.js.nodes.control.WhileNode;
 import com.oracle.truffle.js.nodes.control.WithNode;
 import com.oracle.truffle.js.nodes.control.YieldNode;
 import com.oracle.truffle.js.nodes.decorators.ClassMemberNode;
+import com.oracle.truffle.js.nodes.decorators.DecoratorNode;
 import com.oracle.truffle.js.nodes.function.AbstractBodyNode;
 import com.oracle.truffle.js.nodes.function.BlockScopeNode;
 import com.oracle.truffle.js.nodes.function.CallApplyArgumentsNode;
@@ -1170,8 +1171,12 @@ public class NodeFactory {
     }
 
     //Decorators
-    public static ClassMemberNode createClassMember(ObjectLiteralMemberNode member, JavaScriptNode[] decorators, ObjectLiteralNode memberInfo) {
-        return  ClassMemberNode.create(member, decorators, memberInfo);
+    public static ClassMemberNode createClassMember(ObjectLiteralMemberNode member, DecoratorNode[] decorators, ObjectLiteralNode elementDescriptor) {
+        return ClassMemberNode.create(member, decorators, elementDescriptor);
+    }
+
+    public static DecoratorNode createDecorator(JavaScriptNode expression) {
+        return DecoratorNode.create(expression, JSFunctionCallNode.createCall());
     }
 
 

@@ -105,6 +105,7 @@ import com.oracle.truffle.api.object.DynamicObjectFactory;
 import com.oracle.truffle.api.object.DynamicObjectLibrary;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
+import com.oracle.truffle.js.builtins.ObjectFunctionBuiltins;
 import com.oracle.truffle.js.lang.JavaScriptLanguage;
 import com.oracle.truffle.js.nodes.JavaScriptNode;
 import com.oracle.truffle.js.nodes.NodeFactory;
@@ -148,6 +149,7 @@ import com.oracle.truffle.js.nodes.control.ReturnTargetNode;
 import com.oracle.truffle.js.nodes.control.SequenceNode;
 import com.oracle.truffle.js.nodes.control.StatementNode;
 import com.oracle.truffle.js.nodes.control.SuspendNode;
+import com.oracle.truffle.js.nodes.decorators.DecoratorNode;
 import com.oracle.truffle.js.nodes.function.AbstractFunctionArgumentsNode;
 import com.oracle.truffle.js.nodes.function.BlockScopeNode;
 import com.oracle.truffle.js.nodes.function.EvalNode;
@@ -3309,15 +3311,15 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
                 classElement = enterAccessorClassElementNode(classElementDefinition);
             }
             List<Expression> decoratorDefinitions = classElementDefinition.getDecorators();
-            JavaScriptNode[] decorators = null;
+            DecoratorNode[] decorators = null;
             ObjectLiteralNode memberInfo = null;
             if(decoratorDefinitions != null && decoratorDefinitions.size() != 0) {
                 memberInfo = transformMemberDescription(classElementDefinition);
                 int size = decoratorDefinitions.size();
-                decorators = new JavaScriptNode[size];
+                decorators = new DecoratorNode[size];
                 for (int j = size - 1; j >= 0; j--) {
                     JavaScriptNode decoratorExpression = transform(decoratorDefinitions.get(j));
-                    decorators[size - 1 - j] = decoratorExpression;
+                    decorators[size - 1 - j] = factory.createDecorator(decoratorExpression);
                 }
             }
             classElements.add(factory.createClassMember(classElement, decorators, memberInfo));
