@@ -5,10 +5,10 @@ import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.object.DynamicObject;
 import com.oracle.truffle.js.nodes.JavaScriptBaseNode;
-import com.oracle.truffle.js.nodes.JavaScriptNode;
 import com.oracle.truffle.js.nodes.access.ObjectLiteralNode;
 import com.oracle.truffle.js.nodes.access.ObjectLiteralNode.ObjectLiteralMemberNode;
 import com.oracle.truffle.js.runtime.JSContext;
+import com.oracle.truffle.js.runtime.builtins.JSFunction;
 import com.oracle.truffle.js.runtime.builtins.JSOrdinary;
 import com.oracle.truffle.js.runtime.objects.JSOrdinaryObject;
 
@@ -21,47 +21,79 @@ public class ClassMemberNode extends JavaScriptBaseNode {
     private DecoratorNode[] decorators;
     @Child
     private ObjectLiteralMemberNode member;
-    @Child
-    private ObjectLiteralNode elementDescriptor;
+    private Object value;
+    private Object key;
 
-    ClassMemberNode(ObjectLiteralMemberNode member, DecoratorNode[] decorators, ObjectLiteralNode elementDescriptor) {
+    ClassMemberNode(ObjectLiteralMemberNode member, DecoratorNode[] decorators) {
         this.member = member;
         this.decorators = decorators;
-        this.elementDescriptor = elementDescriptor;
     }
 
-    public static ClassMemberNode create(ObjectLiteralMemberNode member, DecoratorNode[] decorators, ObjectLiteralNode elementDescriptor) {
-        return new ClassMemberNode(member, decorators, elementDescriptor);
+    public static ClassMemberNode create(ObjectLiteralMemberNode member, DecoratorNode[] decorators) {
+        return new ClassMemberNode(member, decorators);
     }
 
     @ExplodeLoop
-    public void executeDecorators(VirtualFrame frame) {
+    public void executeDecorators(VirtualFrame frame, DynamicObject homeObject, JSContext context) {
         if (decorators == null) {
             return;
         }
-        DynamicObject e = elementDescriptor.execute(frame);
+        member.executeVoid(frame, homeObject, context);
+        value = member.executeValue(frame, homeObject);
+        key = member.executeKey(frame);
+        DynamicObject e = buildElementDescriptor(frame, homeObject, context);
         for (DecoratorNode decorator : decorators) {
             DynamicObject curr = decorator.executeDecorator(frame, e);
-            if(e.getShape().equals(curr.getShape())) {
-                e = curr;
-            }
+            e = curr;
         }
+        value = JSOrdinaryObject.get(e,"method");
     }
 
+    private DynamicObject buildElementDescriptor(VirtualFrame frame, DynamicObject homeObject, JSContext context) {
+        DynamicObject obj = JSOrdinary.create(context);
+        DynamicObject desc = JSOrdinary.create(context);
+
+        //desc
+        JSOrdinaryObject.set(desc,"value", "Descriptor");
+        JSOrdinaryObject.set(desc,"writable",false);
+        JSOrdinaryObject.set(desc,"enumerable", false);
+        JSOrdinaryObject.set(desc, "configurable", true);
+
+        JSOrdinaryObject.set(obj, "desc",desc);
+
+        //kind
+        if(member.isField()) {
+            JSOrdinaryObject.set(obj,"kind","field");
+        } /*else if(member.isMethod()) {
+            JSOrdinaryObject.set(obj,"kind","method");
+        } else {
+            assert (member.isAccessor());
+            JSOrdinaryObject.set(obj,"kind","accessor");
+        }*/
+
+        //value
+        JSOrdinaryObject.set(obj, "method", value);
+        /*if(member.getValue() != null) {
+            JSOrdinaryObject.set(obj, "method", transformFunction(member.getValue()));
+        }*/
+        return obj;
+    }
+
+
     public Object executeKey(VirtualFrame frame) {
-        return member.executeKey(frame);
+        return key;
     }
 
     public Object executeValue(VirtualFrame frame, DynamicObject homeObject) {
-        return member.executeValue(frame, homeObject);
+        return value;
     }
 
     public void executeVoid(VirtualFrame frame, DynamicObject homeObject, JSContext context) {
-        member.executeVoid(frame, homeObject, context);
+        return;
     }
 
     public boolean isField() {
-        return member.isField();
+        return true;//member.isField();
     }
 
     public boolean isStatic() {
@@ -73,7 +105,8 @@ public class ClassMemberNode extends JavaScriptBaseNode {
     }
 
     private ClassMemberNode copyUninitialized(Set<Class<? extends  Tag>> materializedTags) {
-        return new ClassMemberNode(ObjectLiteralMemberNode.cloneUninitialized(member, materializedTags), DecoratorNode.cloneUninitialized(decorators,materializedTags),ObjectLiteralNode.cloneUninitialized(elementDescriptor,materializedTags));
+        //Have a look into elementDescriptor
+        return new ClassMemberNode(ObjectLiteralMemberNode.cloneUninitialized(member, materializedTags), DecoratorNode.cloneUninitialized(decorators,materializedTags));
     }
 
     public static ClassMemberNode[] cloneUninitialized(ClassMemberNode[] members, Set<Class<? extends Tag>> materializedTags) {

@@ -48,6 +48,7 @@ import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.object.DynamicObject;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.js.annotations.GenerateDecoder;
 import com.oracle.truffle.js.annotations.GenerateProxy;
@@ -1171,8 +1172,8 @@ public class NodeFactory {
     }
 
     //Decorators
-    public static ClassMemberNode createClassMember(ObjectLiteralMemberNode member, DecoratorNode[] decorators, ObjectLiteralNode elementDescriptor) {
-        return ClassMemberNode.create(member, decorators, elementDescriptor);
+    public static ClassMemberNode createClassMember(ObjectLiteralMemberNode member, DecoratorNode[] decorators) {
+        return ClassMemberNode.create(member, decorators);
     }
 
     public static DecoratorNode createDecorator(JavaScriptNode expression) {

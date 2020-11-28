@@ -182,6 +182,8 @@ import com.oracle.truffle.js.runtime.JSErrorType;
 import com.oracle.truffle.js.runtime.JSFrameUtil;
 import com.oracle.truffle.js.runtime.JSRuntime;
 import com.oracle.truffle.js.runtime.builtins.JSFunctionData;
+import com.oracle.truffle.js.runtime.builtins.JSFunctionObject;
+import com.oracle.truffle.js.runtime.builtins.JSOrdinary;
 import com.oracle.truffle.js.runtime.objects.Dead;
 import com.oracle.truffle.js.runtime.objects.JSOrdinaryObject;
 import com.oracle.truffle.js.runtime.objects.Undefined;
@@ -3312,9 +3314,7 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
             }
             List<Expression> decoratorDefinitions = classElementDefinition.getDecorators();
             DecoratorNode[] decorators = null;
-            ObjectLiteralNode memberInfo = null;
             if(decoratorDefinitions != null && decoratorDefinitions.size() != 0) {
-                memberInfo = transformMemberDescription(classElementDefinition);
                 int size = decoratorDefinitions.size();
                 decorators = new DecoratorNode[size];
                 for (int j = size - 1; j >= 0; j--) {
@@ -3322,28 +3322,10 @@ abstract class GraalJSTranslator extends com.oracle.js.parser.ir.visitor.Transla
                     decorators[size - 1 - j] = factory.createDecorator(decoratorExpression);
                 }
             }
-            classElements.add(factory.createClassMember(classElement, decorators, memberInfo));
+            classElements.add(factory.createClassMember(classElement, decorators));
         }
         return  classElements;
     }
-
-    private ObjectLiteralNode transformMemberDescription(ClassElementNode member) {
-        ArrayList<ObjectLiteralMemberNode> objLiterals = new ArrayList<>();
-        String kindString;
-        if(member.isField()) {
-            kindString = "field";
-        } else if(member.isMethod()) {
-            kindString = "method";
-        } else {
-            assert (member.isAccessor());
-            kindString = "accessor";
-        }
-
-        JavaScriptNode kindValue = factory.createConstantString(kindString);
-        objLiterals.add(factory.createDataMember("kind",false,true,kindValue,false));
-        return (ObjectLiteralNode) factory.createObjectLiteral(context, objLiterals);
-    }
-
     private ObjectLiteralMemberNode enterMethodClassElementNode(ClassElementNode classElement, Symbol classNameSymbol) {
         if(classNameSymbol != null) {
             classNameSymbol.setHasBeenDeclared(true);
