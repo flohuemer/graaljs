@@ -40,7 +40,6 @@ public class ClassMemberNode extends JavaScriptBaseNode {
         if (decorators == null) {
             return;
         }
-        member.executeVoid(frame, homeObject, context);
         value = member.executeValue(frame, homeObject);
         key = member.executeKey(frame);
         DynamicObject e = buildElementDescriptor(frame, homeObject, context);
@@ -49,6 +48,7 @@ public class ClassMemberNode extends JavaScriptBaseNode {
             e = curr;
         }
         value = JSOrdinaryObject.get(e,"method");
+        member.replace(ObjectLiteralNode.newDataMember(key,member.isStatic(),0, new DummyFunction(value)));
     }
 
     private DynamicObject buildElementDescriptor(VirtualFrame frame, DynamicObject homeObject, JSContext context) {
@@ -91,7 +91,7 @@ public class ClassMemberNode extends JavaScriptBaseNode {
     }
 
     public void executeVoid(VirtualFrame frame, DynamicObject homeObject, JSContext context) {
-        return;
+        member.executeVoid(frame,homeObject, context);
     }
 
     public boolean isField() {
