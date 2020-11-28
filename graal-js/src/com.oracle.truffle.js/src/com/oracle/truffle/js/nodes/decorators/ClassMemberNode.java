@@ -5,8 +5,10 @@ import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.object.DynamicObject;
 import com.oracle.truffle.js.nodes.JavaScriptBaseNode;
+import com.oracle.truffle.js.nodes.JavaScriptNode;
 import com.oracle.truffle.js.nodes.access.ObjectLiteralNode;
 import com.oracle.truffle.js.nodes.access.ObjectLiteralNode.ObjectLiteralMemberNode;
+import com.oracle.truffle.js.nodes.function.JSFunctionExpressionNode;
 import com.oracle.truffle.js.runtime.JSContext;
 import com.oracle.truffle.js.runtime.builtins.JSFunction;
 import com.oracle.truffle.js.runtime.builtins.JSOrdinary;
@@ -93,7 +95,7 @@ public class ClassMemberNode extends JavaScriptBaseNode {
     }
 
     public boolean isField() {
-        return true;//member.isField();
+        return member.isField();
     }
 
     public boolean isStatic() {
