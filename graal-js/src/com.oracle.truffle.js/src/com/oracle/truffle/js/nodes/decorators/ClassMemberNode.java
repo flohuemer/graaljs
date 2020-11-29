@@ -22,17 +22,15 @@ public class ClassMemberNode extends JavaScriptBaseNode {
     @Children
     private DecoratorNode[] decorators;
     @Child
-    private ObjectLiteralMemberNode member;
-    private Object value;
-    private Object key;
+    private ClassElementDecoratorNode decoratorNode;
 
-    ClassMemberNode(ObjectLiteralMemberNode member, DecoratorNode[] decorators) {
-        this.member = member;
+    ClassMemberNode(ClassElementDecoratorNode decoratorNode, DecoratorNode[] decorators) {
+        this.decoratorNode = decoratorNode;
         this.decorators = decorators;
     }
 
-    public static ClassMemberNode create(ObjectLiteralMemberNode member, DecoratorNode[] decorators) {
-        return new ClassMemberNode(member, decorators);
+    public static ClassMemberNode create(ClassElementDecoratorNode decoratorNode, DecoratorNode[] decorators) {
+        return new ClassMemberNode(decoratorNode, decorators);
     }
 
     @ExplodeLoop
@@ -40,75 +38,60 @@ public class ClassMemberNode extends JavaScriptBaseNode {
         if (decorators == null) {
             return;
         }
-        value = member.executeValue(frame, homeObject);
-        key = member.executeKey(frame);
-        DynamicObject e = buildElementDescriptor(frame, homeObject, context);
+        DynamicObject elementDescriptor = JSOrdinary.create(context);
+        decoratorNode.execute(frame, homeObject);
         for (DecoratorNode decorator : decorators) {
-            DynamicObject curr = decorator.executeDecorator(frame, e);
-            e = curr;
+            decoratorNode.updateElementDescriptor(elementDescriptor, context);
+            DynamicObject replacement = decorator.executeDecorator(frame, elementDescriptor);
+            if(decoratorNode.hasSameKind(replacement)) {
+                decoratorNode.updateState(replacement);
+            } else {
+                String kind = (String) JSOrdinaryObject.get(replacement, "kind");
+                switch (kind){
+                    case "field":
+                        decoratorNode.replace(ClassElementDecoratorNode.createFieldDecorator(replacement));
+                        break;
+                    case "method":
+                        decoratorNode.replace(ClassElementDecoratorNode.createMethodDecorator(replacement));
+                        break;
+                    case "accessor":
+                        decoratorNode.replace(ClassElementDecoratorNode.createAccessorDecorator(replacement));
+                        break;
+                }
+                decoratorNode.execute(frame, homeObject);
+            }
+            elementDescriptor = replacement;
         }
-        value = JSOrdinaryObject.get(e,"method");
-        member.replace(ObjectLiteralNode.newDataMember(key,member.isStatic(),0, new DummyFunction(value)));
+        decoratorNode.createMember();
     }
-
-    private DynamicObject buildElementDescriptor(VirtualFrame frame, DynamicObject homeObject, JSContext context) {
-        DynamicObject obj = JSOrdinary.create(context);
-        DynamicObject desc = JSOrdinary.create(context);
-
-        //desc
-        JSOrdinaryObject.set(desc,"value", "Descriptor");
-        JSOrdinaryObject.set(desc,"writable",false);
-        JSOrdinaryObject.set(desc,"enumerable", false);
-        JSOrdinaryObject.set(desc, "configurable", true);
-
-        JSOrdinaryObject.set(obj, "desc",desc);
-
-        //kind
-        if(member.isField()) {
-            JSOrdinaryObject.set(obj,"kind","field");
-        } /*else if(member.isMethod()) {
-            JSOrdinaryObject.set(obj,"kind","method");
-        } else {
-            assert (member.isAccessor());
-            JSOrdinaryObject.set(obj,"kind","accessor");
-        }*/
-
-        //value
-        JSOrdinaryObject.set(obj, "method", value);
-        /*if(member.getValue() != null) {
-            JSOrdinaryObject.set(obj, "method", transformFunction(member.getValue()));
-        }*/
-        return obj;
-    }
-
 
     public Object executeKey(VirtualFrame frame) {
-        return key;
+        return decoratorNode.executeKey(frame);
     }
 
     public Object executeValue(VirtualFrame frame, DynamicObject homeObject) {
-        return value;
+        return decoratorNode.executeValue(frame, homeObject);
     }
 
     public void executeVoid(VirtualFrame frame, DynamicObject homeObject, JSContext context) {
-        member.executeVoid(frame,homeObject, context);
+        decoratorNode.executeVoid(frame,homeObject, context);
     }
 
     public boolean isField() {
-        return member.isField();
+        return decoratorNode.isField();
     }
 
     public boolean isStatic() {
-        return member.isStatic();
+        return decoratorNode.isStatic();
     }
 
     public boolean isAnonymousFunctionDefinition() {
-        return member.isAnonymousFunctionDefinition();
+        return decoratorNode.isAnonymousFunctionDefinition();
     }
 
     private ClassMemberNode copyUninitialized(Set<Class<? extends  Tag>> materializedTags) {
         //Have a look into elementDescriptor
-        return new ClassMemberNode(ObjectLiteralMemberNode.cloneUninitialized(member, materializedTags), DecoratorNode.cloneUninitialized(decorators,materializedTags));
+        return new ClassMemberNode(ClassElementDecoratorNode.cloneUninitialized(decoratorNode, materializedTags), DecoratorNode.cloneUninitialized(decorators,materializedTags));
     }
 
     public static ClassMemberNode[] cloneUninitialized(ClassMemberNode[] members, Set<Class<? extends Tag>> materializedTags) {

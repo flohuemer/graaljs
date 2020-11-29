@@ -186,6 +186,7 @@ import com.oracle.truffle.js.nodes.control.VoidBlockNode;
 import com.oracle.truffle.js.nodes.control.WhileNode;
 import com.oracle.truffle.js.nodes.control.WithNode;
 import com.oracle.truffle.js.nodes.control.YieldNode;
+import com.oracle.truffle.js.nodes.decorators.ClassElementDecoratorNode;
 import com.oracle.truffle.js.nodes.decorators.ClassMemberNode;
 import com.oracle.truffle.js.nodes.decorators.DecoratorNode;
 import com.oracle.truffle.js.nodes.function.AbstractBodyNode;
@@ -1172,14 +1173,25 @@ public class NodeFactory {
     }
 
     //Decorators
-    public static ClassMemberNode createClassMember(ObjectLiteralMemberNode member, DecoratorNode[] decorators) {
-        return ClassMemberNode.create(member, decorators);
+    public static ClassMemberNode createClassMember(ClassElementDecoratorNode decoratorNode, DecoratorNode[] decorators) {
+        return ClassMemberNode.create(decoratorNode, decorators);
     }
 
     public static DecoratorNode createDecorator(JavaScriptNode expression) {
         return DecoratorNode.create(expression, JSFunctionCallNode.createCall());
     }
 
+    public static ClassElementDecoratorNode createMethodDecorator(ObjectLiteralMemberNode member, int placement, int propertyDescriptor, JavaScriptNode value) {
+        return ClassElementDecoratorNode.createMethodDecorator(member, placement, propertyDescriptor, value);
+    }
+
+    public static ClassElementDecoratorNode createFieldDecorator(ObjectLiteralMemberNode member, int placement, int propertyDescriptor, JavaScriptNode initialize) {
+        return ClassElementDecoratorNode.createFieldDecorator(member, placement, propertyDescriptor, initialize);
+    }
+
+    public static ClassElementDecoratorNode createAccessorDecorator(ObjectLiteralMemberNode member, int placement, int propertyDescriptor, JavaScriptNode getter, JavaScriptNode setter) {
+        return ClassElementDecoratorNode.createAccessorDecorator(member, placement, propertyDescriptor, getter, setter);
+    }
 
     // #####
 
