@@ -31,9 +31,8 @@ public abstract class MoveNode extends JSBuiltinNode {
         this.iteratorCloseNode = IteratorCloseNode.create(context);
     }
 
-    @Specialization(guards = "args.length == 1")
-    protected int move(Object[] args) {
-        Object boardState = args[0];
+    @Specialization
+    protected int move(Object boardState) {
         if(boardState == Undefined.instance) {
             //TODO: handle error
             return -1;
@@ -53,46 +52,6 @@ public abstract class MoveNode extends JSBuiltinNode {
             iteratorCloseNode.executeAbrupt(iterator.getIterator());
             throw ex;
         }
-        return minimax(board);
-    }
-
-    private static int minimax(int[] board) {
-        int length = 0;
-        for(int i = 0; i < board.length; i++) {
-            if(board[i] == -1) {
-                length++;
-            }
-        }
-        int action = -1;
-        for(int i = 0; i < board.length; i++) {
-            if(board[i] == -1) {
-                action = Math.min(action, maxValue(board, length));
-            }
-        }
-        return action;
-    }
-
-    private static int maxValue(int[] board, int length) {
-        int[][] succ = SearchTree.getSuccessorStates(board, length, SearchTree.STATE_X);
-        if(succ.length == 0) {
-            return SearchTree.getWinner(board);
-        }
-        int max = minValue(succ[1], length--);
-        for(int i = 2; i < succ.length; i++) {
-            max = Math.max(max, minValue(succ[i],length--));
-        }
-        return max;
-    }
-
-    private static int minValue(int[] board, int length) {
-        int[][] succ = SearchTree.getSuccessorStates(board, length, SearchTree.STATE_O);
-        if(succ.length == 0) {
-            return SearchTree.getWinner(board);
-        }
-        int min = maxValue(succ[1], length--);
-        for(int i = 2; i < succ.length; i++) {
-            min = Math.min(min, maxValue(succ[i], length--));
-        }
-        return min;
+        return SearchTree.getNextAction(board);
     }
 }

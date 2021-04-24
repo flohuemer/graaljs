@@ -3,18 +3,17 @@ package com.oracle.truffle.js.builtins.tictactoe;
 import java.util.Arrays;
 
 public class SearchTree {
-    public static final int STATE_X = 0;
-    public static final int STATE_O = 1;
+    private static final int STATE_PLAYER = 1;
+    private static final int STATE_AI = -1;
+    private static final int STATE_EMPTY = 0;
 
-    public static int[][] getSuccessorStates(int[] board, int length, int player) {
-        if ((player >> 1) != 0) {
-            return new int[0][0];
-        }
+    private static int[][] getSuccessorStates(int[] board, int length, boolean isAIPlaying) {
+        int player = isAIPlaying ? STATE_AI : STATE_PLAYER;
         int[][] successors = new int[length][9];
         int successorIndex = 0;
         for(int i = 0; i < board.length; i++) {
-            if(board[i] == -1) {
-                int[] state = Arrays.copyOf(board,9);
+            if(board[i] == STATE_EMPTY) {
+                int[] state = Arrays.copyOf(board, 9);
                 state[i] = player;
                 successors[successorIndex++] = state;
             }
@@ -22,17 +21,22 @@ public class SearchTree {
         return successors;
     }
 
-    public static int getWinner(int[] board) {
-        boolean firstRow = board[0] == board[1] && board[1] == board[2];
-        boolean secondRow = board[3] == board[4] && board[4] == board[5];
-        boolean thirdRow = board[6] == board[7] && board[7] == board[8];
+    private static boolean checkLine(int[] board, int i1, int i2, int i3) {
+        return Math.abs(board[i1] + board[i2] + board[i3]) == 3;
+    }
 
-        boolean firstColumn = board[0] == board[3] && board[3] == board[6];
-        boolean secondColumn = board[1] == board[4] && board[4] == board[7];
-        boolean thirdColumn = board[2] == board[5] && board[5] == board[8];
+    private static int getWinner(int[] board) {
 
-        boolean diagonal = board[0] == board[4] && board[4] == board[8];
-        boolean offDiagonal = board[2] == board[4] && board[4] == board[6];
+        boolean firstRow = checkLine(board, 0, 1, 2);
+        boolean secondRow = checkLine(board, 3, 4, 5);
+        boolean thirdRow = checkLine(board, 6, 7, 8);
+
+        boolean firstColumn = checkLine(board, 0, 3, 6);
+        boolean secondColumn = checkLine(board, 1, 4, 7);
+        boolean thirdColumn = checkLine(board, 2, 5, 8);
+
+        boolean diagonal = checkLine(board, 0, 4, 8);
+        boolean offDiagonal = checkLine(board, 2, 4, 6);
 
         if(firstRow || firstColumn) {
             return board[0];
@@ -43,6 +47,68 @@ public class SearchTree {
         if(thirdRow || thirdColumn) {
             return board[8];
         }
-        return -1;
+        //draw
+        return 0;
+    }
+
+    private static boolean hasPlayerWon(int[] board, int player) {
+        return getWinner(board) == player;
+    }
+
+    public static int getNextAction(int[] board) {
+        int length = 0;
+        for(int i = 0; i < board.length; i++) {
+            if(board[i] == STATE_EMPTY) {
+                length++;
+            }
+        }
+        if(length == 0) {
+            return -1;
+        }
+
+        int action = -1;
+        int min = Integer.MAX_VALUE;
+        for(int i = 0; i < board.length; i++) {
+            if(board[i] == STATE_EMPTY) {
+                board[i] = STATE_AI;
+                int val = maxValue(board,length - 1);
+                if(val < min) {
+                    min = val;
+                    action = i;
+                }
+                board[i] = STATE_EMPTY;
+            }
+        }
+        return action;
+    }
+
+    private static int maxValue(int[] board, int length) {
+        if(length == 0) {
+            return getWinner(board);
+        }
+        int[][] successors = getSuccessorStates(board, length, false);
+        int max = Integer.MIN_VALUE;
+        for(int i = 0; i < successors.length; i++) {
+            if(hasPlayerWon(successors[i], STATE_PLAYER)) {
+                return STATE_PLAYER;
+            }
+            max = Math.max(max, minValue(successors[i],length - 1));
+        }
+        return max;
+    }
+
+    private static int minValue(int[] board, int length) {
+        if(length == 0) {
+            return getWinner(board);
+        }
+        int[][] successors = getSuccessorStates(board, length, true);
+        int min = Integer.MAX_VALUE;
+        for(int i = 0; i < successors.length; i++) {
+            if(hasPlayerWon(successors[i], STATE_AI)) {
+                return STATE_AI;
+            }
+            min = Math.min(min, maxValue(successors[i], length - 1));
+        }
+        return min;
     }
 }
