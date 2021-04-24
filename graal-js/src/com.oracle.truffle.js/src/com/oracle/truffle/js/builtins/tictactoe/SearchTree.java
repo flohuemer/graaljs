@@ -25,8 +25,7 @@ public class SearchTree {
         return Math.abs(board[i1] + board[i2] + board[i3]) == 3;
     }
 
-    private static int getWinner(int[] board) {
-
+    public static int getWinner(int[] board) {
         boolean firstRow = checkLine(board, 0, 1, 2);
         boolean secondRow = checkLine(board, 3, 4, 5);
         boolean thirdRow = checkLine(board, 6, 7, 8);
@@ -47,7 +46,12 @@ public class SearchTree {
         if(thirdRow || thirdColumn) {
             return board[8];
         }
-        //draw
+        //draw check
+        for(int i = 0; i < board.length; i++) {
+            if(board[i] == STATE_EMPTY) {
+                return -2;
+            }
+        }
         return 0;
     }
 
