@@ -55,6 +55,7 @@ import java.util.Objects;
 import java.util.SplittableRandom;
 import java.util.WeakHashMap;
 
+import com.oracle.truffle.js.runtime.builtins.tictactoe.JSTicTacToe;
 import org.graalvm.home.HomeFinder;
 import org.graalvm.options.OptionValues;
 
@@ -261,6 +262,8 @@ public class JSRealm {
     private Object commonJSRequireFunctionObject;
     private Map<String, Object> commonJSPreLoadedBuiltins;
     private Object jsonParseFunctionObject;
+
+    private final DynamicObject tictactoeObject;
 
     private final DynamicObject arrayBufferConstructor;
     private final DynamicObject arrayBufferPrototype;
@@ -612,6 +615,8 @@ public class JSRealm {
         }
 
         this.mathObject = JSMath.create(this);
+
+        this.tictactoeObject = JSTicTacToe.create(this);
 
         boolean es8 = context.getContextOptions().getEcmaScriptVersion() >= JSConfig.ECMAScript2017;
         if (es8) {
@@ -1264,6 +1269,7 @@ public class JSRealm {
         putGlobalProperty(JSRegExp.CLASS_NAME, getRegExpConstructor());
         putGlobalProperty(JSMath.CLASS_NAME, mathObject);
         putGlobalProperty(JSON.CLASS_NAME, JSON.create(this));
+        putGlobalProperty(JSTicTacToe.CLASS_NAME, tictactoeObject);
 
         JSObjectUtil.putDataProperty(context, global, JSRuntime.NAN_STRING, Double.NaN);
         JSObjectUtil.putDataProperty(context, global, JSRuntime.INFINITY_STRING, Double.POSITIVE_INFINITY);
