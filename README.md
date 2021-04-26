@@ -1,73 +1,17 @@
-[![https://graalvm.slack.com](https://img.shields.io/badge/slack-join%20channel-active)](https://www.graalvm.org/slack-invitation/)
+# Polyglot - TicTacToe
 
-A high performance implementation of the JavaScript programming language.
-Built on the GraalVM by Oracle Labs.
+This branch of the Graal.js project represents a polyglot TicTacToe implementation. While the game logic and command line interface is written in JavaScript, the TicTacToe AI is implemented as Graal.js builtin in Java. 
 
-The goals of GraalVM JavaScript are:
+## JavaScript
 
-* Execute JavaScript code with best possible performance
-* [Full compatibility with the latest ECMAScript specification](docs/user/JavaScriptCompatibility.md)
-* Support Node.js applications, including native packages ([check](https://www.graalvm.org/docs/reference-manual/compatibility/))
-* Allow simple upgrading from [Nashorn](docs/user/NashornMigrationGuide.md) or [Rhino](docs/user/RhinoMigrationGuide.md) based applications
-* [Fast interoperability](https://www.graalvm.org/docs/reference-manual/polyglot/) with Java, Scala, or Kotlin, or with other GraalVM languages like Ruby, Python, or R
-* Be embeddable in systems like [Oracle RDBMS](https://labs.oracle.com/pls/apex/f?p=LABS:project_details:0:15) or MySQL
+The JavaScript part of the implementation can be found in the `tictactoe.js` file inside the `tictactoe` directory of this project. Here, the game loop and the input and output of the game is implemented. 
 
+## Graal.js builtin
 
-## Getting Started
-See the documentation on the [GraalVM website](https://www.graalvm.org/docs/getting-started/) how to install and use GraalVM JavaScript.
+The Java part of the implementation can be found in the `com.oracle.truffle.js.builtins.tictactoe` and `com.oracle.truffle.js.runtime.builtins.tictactoe` packages. Here, the logic for the AI (minimax algorithm) and for determining the winner of the game is implemented and provided to JS via a Graal.js builtin.
 
-```
-$ $GRAALVM/bin/js
-> print("Hello JavaScript");
-Hello JavaScript
->
-```
+The TicTacToe logic is implemented in the `SearchTree` class. The implemented nodes are the `TicTacToeNode`, `CheckNode` and `MoveNode`. The `TicTacToeNode` represents the base class which implements the conversion from a JavaScript list to a Java int array with the help of iterator nodes. The `MoveNode` determines the next move of the AI with the help of the `SearchTree` class and represents the implementation of the JavaScript builtin `TicTacToe.move(list)`. The `CheckNode` determines the winner of a game, based on a given game state, and represents the JavaScript builtin `TicTacToe.check(list)`.
 
-The preferred way to run GraalVM JavaScript is from a [GraalVM](https://www.graalvm.org/downloads/).
-If you prefer running it on a stock JVM, please have a look at the documentation in [`RunOnJDK.md`](https://github.com/graalvm/graaljs/blob/master/docs/user/RunOnJDK.md).
+## Executing this project
 
-## Documentation
-
-Extensive documentation is available on [graalvm.org](https://www.graalvm.org/): how to [`Run JavaScript`](https://www.graalvm.org/docs/getting-started/#running-javascript) and the more extensive [`JavaScript & Node.js Reference Manual`](https://www.graalvm.org/docs/reference-manual/languages/js/).
-In addition there is documentation in the source code repository in the [`docs`](https://github.com/graalvm/graaljs/tree/master/docs) folder, for [`users`](https://github.com/graalvm/graaljs/tree/master/docs/user) and [`contributors`](https://github.com/graalvm/graaljs/tree/master/docs/contributor) of the engine.
-
-For contributors, a guide how to build GraalVM JavaScript from source code can be found in [`Building.md`](https://github.com/graalvm/graaljs/tree/master/docs/Building.md).
-
-## Current Status
-
-GraalVM JavaScript is compatible with the [ECMAScript 2020 specification](http://www.ecma-international.org/ecma-262/11.0/index.html).
-Starting with GraalVM 21.0.0, ECMAScript 2021 - currently at the draft stage - is the default compatibility level.
-New features, e.g. `ECMAScript proposals` scheduled to land in future editions, are added frequently and are accessible behind a flag.
-
-In addition, some popular extensions of other engines are supported, see [`JavaScriptCompatibility.md`](https://github.com/graalvm/graaljs/tree/master/docs/user/JavaScriptCompatibility.md).
-
-GraalVM JavaScript can execute Node.js applications.
-It provides high compatibility with existing npm packages, with high likelyhood that your application will run out of the box.
-This includes npm packages with native implementations.
-Note that some npm modules will require to be re-compiled from source with GraalVM JavaScript if they ship with binaries that have been compiled for Node.js based on V8.
-Node.js support is only available in full GraalVM releases, but not in the `standalone` GraalVM JavaScript distribution.
-
-### Compatibility on Operating Systems
-
-The core JavaScript engine is a Java application and is thus in principle compatible with every operating system that provides a compatible JVM, [see `RunOnJDK.md`](https://github.com/graalvm/graaljs/tree/master/docs/user/RunOnJDK.md).
-We test and support GraalVM JavaScript currently in full extent on Linux and MacOS.
-For Windows, a preliminary preview version is available.
-
-Some features, including the Node.js support, are currently not supported on all platforms (e.g. Windows).
-
-## GraalVM JavaScript Reference Manual
-
-A reference manual for GraalVM JavaScript is available on the [GraalVM website](https://www.graalvm.org/docs/reference-manual/languages/js/).
-
-## Stay connected with the community
-
-See [graalvm.org/community](https://www.graalvm.org/community/) on how to stay connected with the development community.
-The channel _graaljs_ on [graalvm.slack.com](https://www.graalvm.org/slack-invitation) is a good way to get in touch with us.
-
-## Licence
-
-GraalVM JavaScript is available under the following license:
-
-* [The Universal Permissive License (UPL), Version 1.0](https://opensource.org/licenses/UPL)
-
-
+The project can be executed by building this branch with `mx build` and executing `mx js ../tictactoe/tictactoe.js` inside the `graal-js` subdirectory. The tictactoe fields correspond to the numbers on the num pad.
